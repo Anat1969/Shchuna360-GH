@@ -2085,3 +2085,7 @@ details.insight summary {
 details.insight summary::-webkit-details-marker {
   display: none;
 }
+.h-grade {
+  display: block;
+  font-size: 10.5px;
+}

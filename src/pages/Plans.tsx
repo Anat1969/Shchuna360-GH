@@ -15,7 +15,7 @@ export default function Plans() {
   const { plans, scores, runs, status, autoReady } = usePlans();
   const { editor } = useStore();
   const { q } = useLocation();
-  const sort = (q.get("sort") as "pct" | "coverage" | "title") || "pct";
+  const sort = (q.get("sort") as "points" | "pct" | "coverage" | "title") || "points";
   const [busy, setBusy] = useState<string | null>(null);
 
   const rows = useMemo(() => {
@@ -32,7 +32,7 @@ export default function Plans() {
   const city = useMemo(() => cityMetrics(measured.map((x) => x.s!)), [measured]);
   const weakest = city.filter((c) => c.avg != null && c.n - c.silent >= 3).sort((a, b) => a.avg! - b.avg!).slice(0, 6);
   const silent = [...city].sort((a, b) => b.silent - a.silent).slice(0, 6);
-  const avg = (k: "pct" | "coverage") => (measured.length ? Math.round(measured.reduce((s, x) => s + x.r![k], 0) / measured.length) : 0);
+  const avg = (k: "pct" | "coverage" | "points") => (measured.length ? Math.round(measured.reduce((s, x) => s + x.r![k], 0) / measured.length) : 0);
   const sections = CHAPTERS.flatMap((ch) => ch.sections.map((s) => ({ name: s.name, color: ch.color })));
 
   const runAuto = async (p: PlanProject) => {
@@ -73,7 +73,7 @@ export default function Plans() {
           <section className="stats-row">
             {[
               { v: measured.length, l: "תוכניות נמדדו", s: `מתוך ${plans.length}` },
-              { v: `${avg("pct")}%`, l: "ציון ממוצע", s: "על המדדים שנמדדו" },
+              { v: `${avg("points")}`, l: "נקודות שהוכחו, בממוצע", s: `מתוך 120 · איכות במה שנמדד ${avg("pct")}%` },
               { v: `${avg("coverage")}%`, l: "כיסוי ממוצע", s: "מהמדדים שהמסמכים מאפשרים למדוד" },
               { v: measured.reduce((s, x) => s + (x.p.units_planned ?? 0), 0).toLocaleString("he-IL"), l: "יחידות דיור מתוכננות", s: "בתוכניות שנמדדו" },
             ].map((k, i) => (
@@ -125,9 +125,10 @@ export default function Plans() {
             <Segmented
               label="מיון"
               value={sort}
-              onChange={(v) => setQuery({ sort: v === "pct" ? null : v })}
+              onChange={(v) => setQuery({ sort: v === "points" ? null : v })}
               options={[
-                { value: "pct", label: "לפי ציון" },
+                { value: "points", label: "לפי נקודות" },
+                { value: "pct", label: "לפי איכות" },
                 { value: "coverage", label: "לפי כיסוי" },
                 { value: "title", label: "לפי שם" },
               ]}
@@ -135,15 +136,17 @@ export default function Plans() {
           </div>
 
           <p className="notice">
-            הציון מחושב על המדדים שנמדדו. תוכנית שהוראותיה המלאות נקראו נמדדת על יותר מדדים, וחולשות שלה נחשפות. תוכנית עם
-            כיסוי נמוך עלולה להיראות טוב יותר רק כי המסמכים שותקים. השוואה הוגנת היא בין תוכניות בכיסוי דומה.
+            <b>נקודות</b> הן מה שהמסמכים מוכיחים מתוך 120, ומהן נגזרת הדרגה הרשמית: מה שלא נמדד לא נצבר. <b>איכות</b> היא
+            הציון רק על המדדים שנמדדו, ומראה את רמת התכנון במה שכן ידוע. תוכנית עם כיסוי נמוך מקבלת מעט נקודות גם כשהאיכות
+            גבוהה, ולכן כדאי להשלים את מסמכיה לפני השוואה.
           </p>
           <div className="heat-wrap">
             <table className="heat">
               <thead>
                 <tr>
                   <th className="h-plan">תוכנית</th>
-                  <th>ציון</th>
+                  <th>נקודות</th>
+                  <th>איכות</th>
                   <th>כיסוי</th>
                   {sections.map((s) => (
                     <th key={s.name} className="h-sec" title={s.name}>
@@ -165,8 +168,14 @@ export default function Plans() {
                     </td>
                     <td>
                       <span className="h-pct" style={{ color: r!.grade.color }}>
-                        {r!.pct}%
+                        {r!.points}
                       </span>
+                      <span className="mono small h-grade" style={{ color: r!.grade.color }}>
+                        {r!.grade.label}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="mono">{r!.pct}%</span>
                     </td>
                     <td>
                       <span className="cov">
@@ -206,8 +215,8 @@ export default function Plans() {
             {measured.slice(0, 3).map(({ p, r }) => (
               <a key={p.id} className="a-card" {...linkProps(`/plans/${p.id}`)}>
                 <div className="a-ring">
-                  <Ring pct={r!.pct} color={r!.grade.color} size={86} stroke={7} />
-                  <b style={{ color: r!.grade.color }}>{r!.pct}%</b>
+                  <Ring pct={r!.conservative} color={r!.grade.color} size={86} stroke={7} />
+                  <b style={{ color: r!.grade.color }}>{r!.points}</b>
                 </div>
                 <div className="a-body">
                   <div className="a-meta mono">

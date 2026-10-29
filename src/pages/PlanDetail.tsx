@@ -98,16 +98,17 @@ export default function PlanDetail({ id }: { id: string }) {
         </div>
         <div className="ws-score col">
           <div className="ring-wrap">
-            <Ring pct={r.pct} color={r.grade.color} size={120} stroke={9} />
+            <Ring pct={r.conservative} color={r.grade.color} size={120} stroke={9} />
             <b style={{ color: r.grade.color, fontSize: 30 }}>
-              <Num value={r.pct} suffix="%" />
+              <Num value={r.points} />
+              <small className="ring-of">/120</small>
             </b>
           </div>
           <div className="grade" style={{ color: r.grade.color }}>
             {r.grade.label}
           </div>
           <div className="muted small center">
-            על {r.measured} מדדים שנמדדו. ציון שמרני (לא נמדד = 0): {r.conservative}%
+            נקודות שהמסמכים מוכיחים. איכות במה שנמדד: {r.pct}% על {r.measured} מדדים.
           </div>
         </div>
       </div>

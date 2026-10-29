@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { ALL_METRICS, CHAPTERS, getGrade } from "../data/chapters";
+import { ALL_METRICS, CHAPTERS, getGrade, toPoints } from "../data/chapters";
 import { overall, type Scores } from "./score";
 import { db, getEditorKey } from "./store";
 
@@ -63,7 +63,9 @@ export function measure(ps: PlanScore) {
   return {
     scores,
     pct,
-    grade: getGrade(pct),
+    // An official band counts only what the documents prove: unmeasured earns nothing.
+    grade: getGrade(overall(scores).pct),
+    points: toPoints(overall(scores).pct),
     coverage,
     measured: measured.length,
     total: rel.length,
