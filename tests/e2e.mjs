@@ -75,7 +75,7 @@ await mock(page);
 // Landing
 await page.goto(BASE + "/");
 await page.waitForTimeout(1500);
-ok(await page.locator("ai-menu .logo").isVisible(), "A&I logo button in the top bar");
+ok(await page.locator("ai-menu .logo").waitFor({ timeout: 10000 }).then(() => true, () => false), "A&I logo button in the top bar");
 ok(!(await page.locator("header >> text=העתקת קישור").first().isVisible().catch(() => false)), "no loose development buttons in the bar");
 ok((await page.locator("ai-menu").getAttribute("brand")) === "ashdod", "municipal brand on the logo button");
 ok((await page.locator(".hero .iso-b").count()) === 44, "neighborhood model draws 44 buildings");

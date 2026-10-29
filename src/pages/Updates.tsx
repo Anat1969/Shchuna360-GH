@@ -2,6 +2,12 @@ import { Reveal } from "../components/UI";
 
 export const CHANGES = [
   {
+    version: "2.0.1",
+    date: "2026-10-29",
+    title: "תיקון טעינה ראשונה",
+    items: ["בביקור הראשון הדף כבר לא מתרענן מעצמו באמצע מעבר בין עמודים."],
+  },
+  {
     version: "2.0",
     date: "2026-10-29",
     title: "שכונה 360° עוברת לעיריית אשדוד",

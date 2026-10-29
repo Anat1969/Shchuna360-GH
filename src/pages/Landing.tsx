@@ -34,6 +34,7 @@ export default function Landing() {
 
   const scores = demo(seed);
   const o = overall(scores, 2);
+  const release = CHANGES.find((c) => c.items.length >= 3) ?? CHANGES[0];
   const published = items.filter((a) => a.status === "published").slice(0, 3);
 
   const start = () => navigate(`/a/${create().id}`);
@@ -223,10 +224,10 @@ export default function Landing() {
       <section className="block">
         <Reveal>
           <div className="kicker mono">מה חדש</div>
-          <h2 className="h2">גרסה {CHANGES[0].version}</h2>
+          <h2 className="h2">גרסה {release.version}</h2>
         </Reveal>
         <ul className="news">
-          {CHANGES[0].items.slice(0, 5).map((t, i) => (
+          {release.items.slice(0, 5).map((t, i) => (
             <Reveal key={t} delay={i * 0.05}>
               <li>{t}</li>
             </Reveal>

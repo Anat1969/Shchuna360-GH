@@ -80,6 +80,8 @@ export function Toasts() {
   );
 }
 
+let updating = false;
+
 // A new deploy installs a new service worker; offer to switch to it.
 export function UpdateBanner() {
   const [reg, setReg] = useState<ServiceWorkerRegistration | null>(null);
@@ -92,10 +94,11 @@ export function UpdateBanner() {
       r.addEventListener("updatefound", () => watch(r.installing));
       setInterval(() => r.update().catch(() => {}), 30 * 60 * 1000);
     });
-    let reloaded = false;
+    // Reload only when the person asked for the update. The first install also
+    // fires controllerchange (clients.claim), and reloading then cut navigation short.
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloaded) return;
-      reloaded = true;
+      if (!updating) return;
+      updating = false;
       location.reload();
     });
   }, []);
@@ -104,7 +107,10 @@ export function UpdateBanner() {
       {reg && (
         <motion.div className="update" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}>
           <span>גרסה חדשה של שכונה 360° זמינה.</span>
-          <button type="button" className="btn" onClick={() => reg.waiting?.postMessage("skip")}>
+          <button type="button" className="btn" onClick={() => {
+              updating = true;
+              reg.waiting?.postMessage("skip");
+            }}>
             עדכון עכשיו
           </button>
         </motion.div>
