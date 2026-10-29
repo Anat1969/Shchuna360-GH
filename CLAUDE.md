@@ -29,6 +29,10 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
 - `public/sw.js` מקבל חותמת build בכל בנייה; גרסה חדשה מציגה "עדכון עכשיו". כל שינוי מהותי: להוסיף רשומה ל-`CHANGES`
   ב-`src/pages/Updates.tsx` ולהעלות `version` ב-package.json.
 
+## פריסה
+- Vercel: פרויקט `shchuna360` (`prj_bxwAv2gfTzHIvQAm766h0euXtBd9`), מחובר ל-GitHub. כל מיזוג ל-main פורס לייצור.
+- הגנת Vercel Authentication כבויה, כדי שהאתר יהיה ציבורי. `vercel.json` מפנה כל נתיב ל-index.html.
+
 ## בדיקה
 ```bash
 npm run build && npx vite preview --port 4173 & npm test && npm run e2e
