@@ -92,8 +92,16 @@ export function cityMetrics(list: PlanScore[]) {
   });
 }
 
-type State = { plans: PlanProject[]; scores: Map<string, PlanScore>; status: "idle" | "loading" | "ok" | "error"; autoReady: boolean | null };
-let state: State = { plans: [], scores: new Map(), status: "idle", autoReady: null };
+export type MeasureRun = { id: number; plan_project_id: string; status: "running" | "done" | "error"; error: string | null; started_at: string };
+
+type State = {
+  plans: PlanProject[];
+  scores: Map<string, PlanScore>;
+  runs: Map<string, MeasureRun>;
+  status: "idle" | "loading" | "ok" | "error";
+  autoReady: boolean | null;
+};
+let state: State = { plans: [], scores: new Map(), runs: new Map(), status: "idle", autoReady: null };
 const subs = new Set<() => void>();
 const set = (p: Partial<State>) => {
   state = { ...state, ...p };
@@ -102,18 +110,21 @@ const set = (p: Partial<State>) => {
 
 export async function loadPlans() {
   set({ status: "loading" });
-  const [pp, sc] = await Promise.all([
+  const [pp, sc, rn] = await Promise.all([
     db
       .from("plan_projects")
       .select("id,title,kind,status,plan_number,quarter_id,units_existing,units_planned")
       .eq("published", true)
       .order("title"),
     db.from("shchuna_plan_scores").select("*"),
+    db.from("shchuna_measure_runs").select("id,plan_project_id,status,error,started_at").order("id", { ascending: false }).limit(200),
   ]);
   if (pp.error || sc.error) return set({ status: "error" });
   set({
     plans: pp.data as PlanProject[],
     scores: new Map((sc.data as PlanScore[]).map((s) => [s.plan_project_id, s])),
+    // latest run per plan (rows arrive newest first)
+    runs: new Map(((rn.data ?? []) as MeasureRun[]).reverse().map((r) => [r.plan_project_id, r])),
     status: "ok",
   });
   fetch(FN)
@@ -133,13 +144,34 @@ export function usePlans() {
   return s;
 }
 
-export async function measureAuto(planId: string) {
+// Starts a server-side measurement and follows its run log until it ends.
+// Resolves to the final run, or null when the request was refused.
+export async function measureAuto(planId: string): Promise<MeasureRun | null> {
   const key = getEditorKey();
-  if (!key) return false;
+  if (!key) return null;
+  const started = Date.now();
   const r = await fetch(FN, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: "sb_publishable_1KSwG6rqTzBSHmI2RxX6Fw_EEcuKzk3" },
     body: JSON.stringify({ plan_project_id: planId, key }),
   });
-  return r.ok;
+  if (!r.ok) return null;
+  for (let i = 0; i < 60; i++) {
+    const { data } = await db
+      .from("shchuna_measure_runs")
+      .select("id,plan_project_id,status,error,started_at")
+      .eq("plan_project_id", planId)
+      .order("id", { ascending: false })
+      .limit(1);
+    const run = data?.[0] as MeasureRun | undefined;
+    if (run && Date.parse(run.started_at) >= started - 60_000) {
+      set({ runs: new Map(state.runs).set(planId, run) });
+      if (run.status !== "running") {
+        await loadPlans();
+        return run;
+      }
+    }
+    await new Promise((res) => setTimeout(res, 8000));
+  }
+  return state.runs.get(planId) ?? null;
 }

@@ -2012,3 +2012,9 @@ blockquote {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+.tag.err-tag {
+  background: light-dark(#fbe9e7, #3a1d19);
+  color: #b03a2e;
+  margin-inline-start: auto;
+  margin-inline-end: 8px;
+}

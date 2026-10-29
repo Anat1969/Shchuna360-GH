@@ -58,6 +58,7 @@ async function mock(page) {
       return json(null);
     }
     if (url.includes("/plan_projects")) return json([PLAN, PENDING]);
+    if (url.includes("/shchuna_measure_runs")) return json([{ id: 1, plan_project_id: PENDING.id, status: "error", error: "test failure", started_at: "2026-10-29T19:00:00Z" }]);
     if (url.includes("/shchuna_plan_scores")) return json([{ ...SCORE, stage: 2, method: "claude-session", model: "claude-opus-5-5", measured_at: "2026-10-29T19:00:00Z" }]);
     if (url.includes("/quarters")) return json([{ id: "q-o", name: 'רובע ט"ו' }, { id: "q-g", name: "רובע ז'" }]);
     return json([]);
@@ -177,6 +178,7 @@ await page.waitForTimeout(1200);
 ok((await page.locator(".heat tbody tr").count()) === 1, "plans heat map lists the measured plan");
 ok((await page.locator(".heat tbody tr .h-cell").count()) === 13, "heat map has 13 topic cells");
 ok(await page.locator(".pending", { hasText: "תוכנית חדשה לבדיקה" }).isVisible(), "unmeasured plan listed as pending");
+ok(await page.locator(".pending .err-tag").isVisible(), "a failed automatic measurement is shown, not silent");
 ok(await page.locator(".panel.city .li").first().isVisible(), "city-wide weak and silent metrics");
 await page.screenshot({ path: "screens/plans.png" });
 await page.locator(".heat .h-plan a").first().click();
