@@ -2,20 +2,20 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { Bar, Num, Radar, Ring } from "../components/Charts";
 import { Segmented } from "../components/UI";
-import { CHAPTERS, GRADES } from "../data/chapters";
+import { CHAPTERS, GRADES, toPoints } from "../data/chapters";
 import { setQuery } from "../lib/router";
 import { chapterScore, overall, pathToTarget, sectionAxes, strengths } from "../lib/score";
 import { update, type Assessment } from "../lib/store";
 
 export default function Dashboard({ a, readOnly }: { a: Assessment; readOnly: boolean }) {
   const [show, setShow] = useState<"now" | "path">("path");
-  const o = overall(a.scores, a.stage);
-  const path = pathToTarget(a.scores, a.stage, a.target);
+  const o = overall(a.scores, a.na);
+  const path = pathToTarget(a.scores, a.na, a.target);
   const after = { ...a.scores, ...Object.fromEntries(path.steps.map((s) => [s.id, s.to])) };
-  const oAfter = overall(after, a.stage);
-  const axes = sectionAxes(a.scores, a.stage).map((x) => ({ ...x, label: x.label, pct: x.pct }));
-  const axesAfter = sectionAxes(after, a.stage);
-  const { top, bottom, unrated } = strengths(a.scores, a.stage);
+  const oAfter = overall(after, a.na);
+  const axes = sectionAxes(a.scores, a.na).map((x) => ({ ...x, label: x.label, pct: x.pct }));
+  const axesAfter = sectionAxes(after, a.na);
+  const { top, bottom, unrated } = strengths(a.scores, a.na);
   const rated = Object.entries(a.scores).filter(([, v]) => v > 0).map(([k]) => k);
   const evidenced = rated.filter((k) => (a.notes[k] ?? "").trim().length > 0).length;
   const evidencePct = rated.length ? Math.round((evidenced / rated.length) * 100) : 0;
@@ -29,10 +29,10 @@ export default function Dashboard({ a, readOnly }: { a: Assessment; readOnly: bo
     <div className="dash">
       <div className="kpis">
         {[
-          { l: "ציון כולל", v: o.pct, s: o.grade.label, c: o.grade.color, ring: true },
+          { l: "ניקוד מתוך 120", v: o.points, s: `${o.grade.label} · ${o.pct}%`, c: o.grade.color, ring: true, raw: true },
           { l: "שלמות ההערכה", v: completion, s: `${o.scored} מתוך ${o.total} מדדים רלוונטיים`, c: "#1B4F72" },
           { l: "ביסוס ראייתי", v: evidencePct, s: `${evidenced} מתוך ${rated.length} ניקודים מתועדים`, c: "#6E2FA0" },
-          { l: "פער ליעד", v: path.need, s: path.need ? `נקודות חסרות ל-${a.target}%` : "היעד הושג", c: path.need ? "#CA6F1E" : "#1E8449", raw: true },
+          { l: "פער ליעד", v: path.need, s: path.need ? `ציונים חסרים ליעד ${toPoints(a.target)} נקודות` : "היעד הושג", c: path.need ? "#CA6F1E" : "#1E8449", raw: true },
         ].map((k, i) => (
           <motion.div key={k.l} className="kpi" style={{ ["--c" as string]: k.c }} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
             <div className="mono muted">{k.l}</div>
@@ -86,7 +86,7 @@ export default function Dashboard({ a, readOnly }: { a: Assessment; readOnly: bo
         <section className="panel">
           <div className="panel-h">
             <h2>מסלול ליעד</h2>
-            <span className="mono muted">{a.target}%</span>
+            <span className="mono muted">יעד {toPoints(a.target)} נקודות</span>
           </div>
           <div className="target">
             <input
@@ -101,8 +101,8 @@ export default function Dashboard({ a, readOnly }: { a: Assessment; readOnly: bo
             />
             <div className="target-marks mono">
               {[...GRADES].reverse().slice(1).map((g) => (
-                <button key={g.label} type="button" disabled={readOnly} onClick={() => update(a.id, { target: g.min })} style={{ color: g.color }}>
-                  {g.label} {g.min}%
+                <button key={g.label} type="button" disabled={readOnly} onClick={() => update(a.id, { target: Math.ceil(g.min) })} style={{ color: g.color }}>
+                  {g.label} {g.points}
                 </button>
               ))}
             </div>
@@ -136,7 +136,7 @@ export default function Dashboard({ a, readOnly }: { a: Assessment; readOnly: bo
         <section className="panel">
           <h2>לפי פרקים</h2>
           {CHAPTERS.map((ch) => {
-            const c = chapterScore(ch, a.scores, a.stage);
+            const c = chapterScore(ch, a.scores, a.na);
             return (
               <div key={ch.id} className="ch-row" style={{ ["--c" as string]: ch.color }}>
                 <div className="row">

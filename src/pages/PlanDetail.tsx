@@ -192,16 +192,19 @@ export default function PlanDetail({ id }: { id: string }) {
                           <span className="mono ev-id">{String(m.id).padStart(2, "0")}</span>
                           <span className="ev-name">
                             <b>{m.name}</b>
-                            <small className="muted">{e?.note}</small>
+                            <small className="muted">
+                              {e?.note}
+                              {e?.converted && <span className="conv"> · הומר מהסולם הקודם</span>}
+                            </small>
                           </span>
                           <span className={`tag conf-${e?.confidence ?? "none"}`}>{CONF[e?.confidence ?? "none"]}</span>
                           <span className="ev-score">{has ? `${e.score}/${m.maxScore}` : "לא נמדד"}</span>
                         </button>
-                        {open === m.id && (e?.quote || e?.source) && (
+                        {open === m.id && (
                           <div className="ev-body">
                             {e.quote && <blockquote>{e.quote}</blockquote>}
                             <div className="mono muted">
-                              {[e.quote_kind && QUOTE[e.quote_kind], e.source && `מקור: ${e.source}`].filter(Boolean).join(" · ")}
+                              {[e.quote_kind && QUOTE[e.quote_kind], e.source && `מקור: ${e.source}`, `שכונה 360° גרסה 2.0, עמ׳ ${m.page}`].filter(Boolean).join(" · ")}
                             </div>
                           </div>
                         )}

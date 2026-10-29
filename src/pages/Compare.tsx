@@ -61,8 +61,8 @@ export default function Compare() {
             <section className="panel">
               <Radar
                 series={[
-                  { axes: sectionAxes(A.scores, A.stage), color: COLORS[0] },
-                  { axes: sectionAxes(B.scores, B.stage), color: COLORS[1] },
+                  { axes: sectionAxes(A.scores, A.na), color: COLORS[0] },
+                  { axes: sectionAxes(B.scores, B.na), color: COLORS[1] },
                 ]}
               />
             </section>
@@ -78,14 +78,14 @@ export default function Compare() {
                 <tbody>
                   <tr>
                     <td>ציון כולל</td>
-                    <td className="mono">{overall(A.scores, A.stage).pct}%</td>
-                    <td className="mono">{overall(B.scores, B.stage).pct}%</td>
+                    <td className="mono">{overall(A.scores, A.na).pct}%</td>
+                    <td className="mono">{overall(B.scores, B.na).pct}%</td>
                   </tr>
                   {CHAPTERS.map((ch) => (
                     <tr key={ch.id}>
                       <td style={{ color: ch.color }}>{ch.name}</td>
-                      <td className="mono">{chapterScore(ch, A.scores, A.stage).pct}%</td>
-                      <td className="mono">{chapterScore(ch, B.scores, B.stage).pct}%</td>
+                      <td className="mono">{chapterScore(ch, A.scores, A.na).pct}%</td>
+                      <td className="mono">{chapterScore(ch, B.scores, B.na).pct}%</td>
                     </tr>
                   ))}
                 </tbody>

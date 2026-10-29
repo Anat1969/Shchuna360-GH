@@ -14,6 +14,8 @@ export type Evidence = {
   quote: string | null;
   // set by the load check: found verbatim, condensed from the source, or transcribed from a scan
   quote_kind?: "exact" | "condensed" | "scan" | null;
+  // score converted proportionally from the pre-v3.0 scale; cleared by the next measurement
+  converted?: boolean;
   source: string | null;
   note: string | null;
 };
@@ -66,7 +68,7 @@ export function measure(ps: PlanScore) {
     measured: measured.length,
     total: rel.length,
     documented,
-    conservative: overall(scores, ps.stage).pct,
+    conservative: overall(scores).pct,
   };
 }
 

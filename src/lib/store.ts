@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
+import { ALL_METRICS } from "../data/chapters";
+import { rescale } from "../data/scale";
 import type { Scores } from "./score";
 
 // Ashdod municipality project (ASHDODMAP). Shared with other city apps, so every
@@ -16,6 +18,8 @@ export type Assessment = {
   stage: number;
   scores: Scores;
   notes: Record<string, string>;
+  // metrics marked "not relevant to this project"
+  na: Record<string, boolean>;
   target: number;
   status: "draft" | "published";
   author?: string | null;
@@ -43,7 +47,8 @@ type State = {
   saving: "idle" | "saving" | "saved" | "error";
 };
 
-const LS_ITEMS = "shchuna.assessments.v2";
+const LS_ITEMS = "shchuna.assessments.v3";
+const LS_ITEMS_V2 = "shchuna.assessments.v2";
 const LS_KEY = "shchuna.editorKey";
 
 const read = <T,>(k: string, d: T): T => {
@@ -62,8 +67,22 @@ const write = (k: string, v: unknown) => {
   }
 };
 
+// v3.0 moved to the official v2.0 maxima: convert assessments saved on the old scale once.
+function migrate(): Assessment[] {
+  const v3 = read<Assessment[] | null>(LS_ITEMS, null);
+  if (v3) return v3.map((a) => ({ ...a, na: a.na ?? {} }));
+  const old = read<Assessment[]>(LS_ITEMS_V2, []);
+  return old.map((a) => ({
+    ...a,
+    na: a.na ?? {},
+    scores: Object.fromEntries(
+      Object.entries(a.scores).map(([k, v]) => [k, rescale(Number(k), v, ALL_METRICS.find((m) => m.id === Number(k))!.maxScore)]),
+    ),
+  }));
+}
+
 let state: State = {
-  items: read<Assessment[]>(LS_ITEMS, []),
+  items: migrate(),
   quarters: QUARTERS_FALLBACK,
   editor: null,
   online: "idle",
@@ -128,7 +147,7 @@ export async function refresh() {
   set({ online: "loading" });
   const { data, error } = await db.rpc("shchuna_list", { p_key: editorKey() });
   if (error) return set({ online: "offline" });
-  const remote = new Map((data as Assessment[]).map((a) => [a.id, { ...a, synced: true }]));
+  const remote = new Map((data as Assessment[]).map((a) => [a.id, { ...a, na: a.na ?? {}, synced: true }]));
   const merged: Assessment[] = [];
   for (const a of state.items) {
     const r = remote.get(a.id);
@@ -151,7 +170,8 @@ export function create(seed: Partial<Assessment> = {}) {
     stage: 2,
     scores: {},
     notes: {},
-    target: 70,
+    na: {},
+    target: 63,
     status: "draft",
     created_at: now,
     updated_at: now,
@@ -183,6 +203,7 @@ export async function push(id: string) {
       stage: a.stage,
       scores: a.scores,
       notes: a.notes,
+      na: a.na,
       target: a.target,
       status: a.status,
     },
@@ -191,7 +212,7 @@ export async function push(id: string) {
     set({ saving: "error" });
     return false;
   }
-  const saved = { ...(data as Assessment), synced: true };
+  const saved = { ...(data as Assessment), na: (data as Assessment).na ?? {}, synced: true };
   // Keep edits made while the request was in flight.
   set({
     saving: "saved",
