@@ -8,6 +8,7 @@ import { MA_NIVNE, STATUS, measure, sectionHeat, usePlans } from "../lib/plans";
 import { create, quarterName } from "../lib/store";
 
 const CONF: Record<string, string> = { document: "ציטוט ישיר", inferred: "הסקה מהנתונים", none: "לא ניתן למדוד" };
+const QUOTE: Record<string, string> = { exact: "ציטוט מדויק", condensed: "תמצית מהמקור", scan: "תעתיק מסריקה" };
 const METHOD: Record<string, string> = { "claude-session": "קריאת Claude", auto: "מדידה אוטומטית", manual: "מדידה ידנית" };
 
 export default function PlanDetail({ id }: { id: string }) {
@@ -182,7 +183,9 @@ export default function PlanDetail({ id }: { id: string }) {
                         {open === m.id && (e?.quote || e?.source) && (
                           <div className="ev-body">
                             {e.quote && <blockquote>{e.quote}</blockquote>}
-                            {e.source && <div className="mono muted">מקור: {e.source}</div>}
+                            <div className="mono muted">
+                              {[e.quote_kind && QUOTE[e.quote_kind], e.source && `מקור: ${e.source}`].filter(Boolean).join(" · ")}
+                            </div>
                           </div>
                         )}
                       </article>

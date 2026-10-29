@@ -12,6 +12,8 @@ export type Evidence = {
   score: number | null;
   confidence: "document" | "inferred" | "none";
   quote: string | null;
+  // set by the load check: found verbatim, condensed from the source, or transcribed from a scan
+  quote_kind?: "exact" | "condensed" | "scan" | null;
   source: string | null;
   note: string | null;
 };
