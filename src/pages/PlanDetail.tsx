@@ -4,15 +4,17 @@ import { usePageMenu } from "../components/TopBar";
 import { Reveal, Segmented, fmtDate, toast } from "../components/UI";
 import { CHAPTERS } from "../data/chapters";
 import { linkProps, navigate, setQuery, useLocation } from "../lib/router";
-import { MA_NIVNE, STATUS, measure, sectionHeat, usePlans } from "../lib/plans";
-import { create, quarterName } from "../lib/store";
+import { MA_NIVNE, STATUS, measure, measureAuto, sectionHeat, usePlans } from "../lib/plans";
+import { create, quarterName, useStore } from "../lib/store";
 
 const CONF: Record<string, string> = { document: "ציטוט ישיר", inferred: "הסקה מהנתונים", none: "לא ניתן למדוד" };
 const QUOTE: Record<string, string> = { exact: "ציטוט מדויק", condensed: "תמצית מהמקור", scan: "תעתיק מסריקה" };
 const METHOD: Record<string, string> = { "claude-session": "קריאת Claude", auto: "מדידה אוטומטית", manual: "מדידה ידנית" };
 
 export default function PlanDetail({ id }: { id: string }) {
-  const { plans, scores, status } = usePlans();
+  const { plans, scores, runs, status, autoReady } = usePlans();
+  const { editor } = useStore();
+  const [measuring, setMeasuring] = useState(false);
   const { q } = useLocation();
   const show = (q.get("show") as "all" | "measured" | "silent") || "all";
   const [open, setOpen] = useState<number | null>(null);
@@ -37,7 +39,21 @@ export default function PlanDetail({ id }: { id: string }) {
     navigate(`/a/${a.id}`);
   };
 
-  usePageMenu(s ? [{ label: "פתיחה כהערכה לעריכה", onSelect: toAssessment }] : [], [id, !!s]);
+  const remeasure = async () => {
+    setMeasuring(true);
+    toast("מדידה אוטומטית מחדש התחילה. זה לוקח כשתיים עד שלוש דקות.");
+    const run = await measureAuto(id);
+    setMeasuring(false);
+    toast(!run ? "המדידה האוטומטית לא זמינה כרגע." : run.status === "done" ? "המדידה עודכנה." : "המדידה נכשלה. המדידה הקודמת נשמרה.");
+  };
+
+  usePageMenu(
+    [
+      ...(s ? [{ label: "פתיחה כהערכה לעריכה", onSelect: toAssessment }] : []),
+      ...(editor && autoReady && !measuring ? [{ label: s ? "מדידה אוטומטית מחדש" : "מדידה אוטומטית", onSelect: remeasure }] : []),
+    ],
+    [id, !!s, editor, autoReady, measuring],
+  );
 
   if (!p) return <div className="page empty"><h1 className="h1">{status === "error" ? "אין חיבור לשרת" : "טוען"}</h1></div>;
   if (!s)
@@ -70,6 +86,7 @@ export default function PlanDetail({ id }: { id: string }) {
           </div>
           <h1 className="h1">{p.title}</h1>
           <p className="plan-sum">{s.summary}</p>
+          {(measuring || runs.get(id)?.status === "running") && <div className="notice">מדידה אוטומטית רצה עכשיו. הדף יתעדכן כשהיא תסתיים.</div>}
           <div className="row-start">
             <a className="btn btn-quiet" href={`${MA_NIVNE}/p/${p.id}`} target="_blank" rel="noreferrer">
               התוכנית ב"מה נבנה סביבי"

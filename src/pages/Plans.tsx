@@ -5,14 +5,14 @@ import { usePageMenu } from "../components/TopBar";
 import { Reveal, Segmented, toast } from "../components/UI";
 import { CHAPTERS } from "../data/chapters";
 import { linkProps, setQuery, useLocation } from "../lib/router";
-import { MA_NIVNE, STATUS, cityMetrics, loadPlans, measure, measureAuto, sectionHeat, usePlans, type PlanProject } from "../lib/plans";
+import { MA_NIVNE, STATUS, cityMetrics, measure, measureAuto, sectionHeat, usePlans, type PlanProject } from "../lib/plans";
 import { quarterName, useStore } from "../lib/store";
 
 const heat = (pct: number | null) =>
   pct == null ? "var(--track)" : `color-mix(in srgb, #1E8449 ${pct}%, #C0392B)`;
 
 export default function Plans() {
-  const { plans, scores, status, autoReady } = usePlans();
+  const { plans, scores, runs, status, autoReady } = usePlans();
   const { editor } = useStore();
   const { q } = useLocation();
   const sort = (q.get("sort") as "pct" | "coverage" | "title") || "pct";
@@ -37,10 +37,10 @@ export default function Plans() {
 
   const runAuto = async (p: PlanProject) => {
     setBusy(p.id);
-    const ok = await measureAuto(p.id);
+    toast(`המדידה של "${p.title}" התחילה. זה לוקח כשתיים עד שלוש דקות.`);
+    const run = await measureAuto(p.id);
     setBusy(null);
-    toast(ok ? "המדידה התחילה. התוצאה תופיע בתוך כמה דקות." : "המדידה האוטומטית לא זמינה כרגע.");
-    if (ok) setTimeout(loadPlans, 90_000);
+    toast(!run ? "המדידה האוטומטית לא זמינה כרגע." : run.status === "done" ? `"${p.title}" נמדדה.` : `המדידה של "${p.title}" נכשלה.`);
   };
 
   usePageMenu(
@@ -231,16 +231,21 @@ export default function Plans() {
           <p className="muted small">
             {autoReady
               ? "מדידה אוטומטית זמינה לעורכים מתפריט הלוגו."
-              : "תוכנית חדשה שנכנסת ל\"מה נבנה סביבי\" מופיעה כאן. המדידה האוטומטית תופעל כשיוגדר מפתח Claude בשרת העירוני."}
+              : "תוכנית חדשה שנכנסת ל\"מה נבנה סביבי\" מופיעה כאן. המדידה האוטומטית לא זמינה כרגע בשרת."}
           </p>
           {pending.map(({ p }) => (
             <div key={p.id} className="li">
               <span>
                 {p.title} <span className="mono muted">{p.plan_number}</span>
               </span>
+              {runs.get(p.id)?.status === "error" && busy !== p.id && (
+                <span className="tag err-tag" title={runs.get(p.id)?.error ?? ""}>
+                  המדידה האחרונה נכשלה
+                </span>
+              )}
               {editor && autoReady ? (
-                <button type="button" className="ghost" disabled={busy === p.id} onClick={() => runAuto(p)}>
-                  {busy === p.id ? "מודד" : "מדידה"}
+                <button type="button" className="ghost" disabled={busy === p.id || runs.get(p.id)?.status === "running"} onClick={() => runAuto(p)}>
+                  {busy === p.id || runs.get(p.id)?.status === "running" ? "מודד" : "מדידה"}
                 </button>
               ) : (
                 <span className="tag">ממתינה</span>
