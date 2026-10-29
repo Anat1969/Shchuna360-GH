@@ -1,7 +1,7 @@
 // End-to-end check against `vite preview` (port 4173), every Supabase call mocked.
 // Run: npm run build && (npm run preview &) && npm run e2e
 import { createRequire } from "node:module";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
 let chromium;
 try {
@@ -32,9 +32,13 @@ const PUBLISHED = {
   updated_at: "2026-10-02T10:00:00Z",
 };
 const saves = [];
+const SCORE = JSON.parse(readFileSync(new URL("./fixtures/plan-score.json", import.meta.url)));
+const PLAN = { id: SCORE.plan_project_id, title: "מתחם האצטדיון", kind: "urban_renewal", status: "approved", plan_number: SCORE.plan_number, quarter_id: "q-a", units_existing: 124, units_planned: 974 };
+const PENDING = { ...PLAN, id: "44444444-4444-4444-8444-444444444444", title: "תוכנית חדשה לבדיקה", plan_number: "603-9999999" };
 const server = new Map([[PUBLISHED.id, PUBLISHED]]);
 
 async function mock(page) {
+  await page.route("**/functions/v1/shchuna-measure", (r) => r.fulfill({ status: 200, contentType: "application/json", body: '{"ready":false}' }));
   await page.route("**/rest/v1/**", async (route) => {
     const url = route.request().url();
     const body = route.request().postDataJSON?.() ?? {};
@@ -53,6 +57,8 @@ async function mock(page) {
       server.delete(body.p_id);
       return json(null);
     }
+    if (url.includes("/plan_projects")) return json([PLAN, PENDING]);
+    if (url.includes("/shchuna_plan_scores")) return json([{ ...SCORE, stage: 2, method: "claude-session", model: "claude-opus-5-5", measured_at: "2026-10-29T19:00:00Z" }]);
     if (url.includes("/quarters")) return json([{ id: "q-o", name: 'רובע ט"ו' }, { id: "q-g", name: "רובע ז'" }]);
     return json([]);
   });
@@ -165,6 +171,27 @@ await page.screenshot({ path: "screens/assessments.png" });
 await page.goto(BASE + "/compare");
 await page.waitForTimeout(800);
 ok((await page.locator(".cmp-grid .radar polygon[fill-opacity]").count()) >= 2, "compare overlays two assessments");
+// Plans in the city (measurements of "מה נבנה סביבי")
+await page.goto(BASE + "/plans");
+await page.waitForTimeout(1200);
+ok((await page.locator(".heat tbody tr").count()) === 1, "plans heat map lists the measured plan");
+ok((await page.locator(".heat tbody tr .h-cell").count()) === 13, "heat map has 13 topic cells");
+ok(await page.locator(".pending", { hasText: "תוכנית חדשה לבדיקה" }).isVisible(), "unmeasured plan listed as pending");
+ok(await page.locator(".panel.city .li").first().isVisible(), "city-wide weak and silent metrics");
+await page.screenshot({ path: "screens/plans.png" });
+await page.locator(".heat .h-plan a").first().click();
+await page.waitForURL(/\/plans\/[0-9a-f-]{36}/);
+await page.waitForTimeout(800);
+ok((await page.locator(".ev").count()) === 44, "plan page shows all 44 metrics with evidence");
+await page.locator(".ev:not(.silent) .ev-head").first().click();
+ok(await page.locator(".ev.open blockquote").isVisible(), "evidence quote opens");
+ok((await page.locator('a[href^="https://ashdod-ma-nivne.vercel.app/p/"]').count()) === 1, "link back to the plan in מה נבנה סביבי");
+await page.screenshot({ path: "screens/plan-detail.png" });
+await page.getByRole("button", { name: "פתיחה כהערכה לעריכה" }).click();
+await page.waitForURL(/\/a\/[0-9a-f-]{36}/);
+const seeded = await page.evaluate(() => JSON.parse(localStorage.getItem("shchuna.assessments.v2"))[0]);
+ok(Object.keys(seeded.scores).length === Object.values(SCORE.metrics).filter((e) => e.score != null).length && Object.keys(seeded.notes).length > 0, "plan opens as an editable assessment with its scores");
+
 await page.goto(BASE + "/method");
 ok(await page.getByText("איך הכלי מודד את האמינות של עצמו").isVisible(), "method page");
 
@@ -195,7 +222,7 @@ ok(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistrat
 const m = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const mp = await m.newPage();
 await mock(mp);
-for (const p of ["/", "/assessments", `/a/${PUBLISHED.id}`, `/a/${PUBLISHED.id}?tab=dash`, `/a/${PUBLISHED.id}?tab=report`, "/compare", "/method", "/updates"]) {
+for (const p of ["/", "/plans", `/plans/${PLAN.id}`, "/assessments", `/a/${PUBLISHED.id}`, `/a/${PUBLISHED.id}?tab=dash`, `/a/${PUBLISHED.id}?tab=report`, "/compare", "/method", "/updates"]) {
   await mp.goto(BASE + p);
   await mp.waitForTimeout(900);
   ok(await noHScroll(mp), `mobile ${p}: no horizontal scroll`);

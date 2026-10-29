@@ -25,6 +25,15 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
 - "מסלול ליעד": נקודה אחר נקודה למדד עם האחוז הנמוך ביותר. ההנחה כתובה בממשק ובדף השיטה.
 - התובנות במדדים לא אומתו מול המקורות, ומסומנות "טרם אומתה".
 
+## תוכניות בעיר (חיבור ל"מה נבנה סביבי")
+- המקור: `plan_projects`, `plan_models`, `plan_media` באותו פרויקט ASHDODMAP (אפליקציה `ashdod-ma-nivne.vercel.app`, דף תוכנית `/p/:id`).
+- המדידות: `shchuna_plan_scores` (מפתח `plan_project_id`), קריאה ציבורית, כתיבה דרך RPC `shchuna_save_plan_score` עם מפתח עורך.
+- המחוון: `docs/measurement-rubric.md`. לפני כל build הוא נכתב ל-`public/measure-config.json`, והפונקציה `shchuna-measure`
+  קוראת אותו בזמן ריצה. שינוי במחוון בריפו משנה גם את המדידה האוטומטית.
+- מדידה אוטומטית: `supabase/functions/shchuna-measure`. דורשת סוד `ANTHROPIC_API_KEY` בפרויקט ASHDODMAP; בלעדיו GET מחזיר `ready:false`
+  והדף מציג "ממתינה".
+- כלל: ציון null = "לא ניתן למדוד", לא אפס. לצד כל ציון מוצג כיסוי.
+
 ## עדכונים
 - `public/sw.js` מקבל חותמת build בכל בנייה; גרסה חדשה מציגה "עדכון עכשיו". כל שינוי מהותי: להוסיף רשומה ל-`CHANGES`
   ב-`src/pages/Updates.tsx` ולהעלות `version` ב-package.json.

@@ -111,7 +111,7 @@ export default function Landing() {
       <section className="block">
         <Reveal>
           <div className="kicker mono">01 / מה נמדד</div>
-          <h2 className="h2">שלושה פרקים, ארבעה־עשר נושאים</h2>
+          <h2 className="h2">שלושה פרקים, שלושה־עשר נושאים</h2>
         </Reveal>
         <div className="chapters3">
           {CHAPTERS.map((ch, i) => {
