@@ -56,6 +56,7 @@ export default function TopBar({ globalItems }: { globalItems: Item[] }) {
   const nav = [
     { to: "/", label: "בית", on: path === "/" },
     { to: "/assessments", label: "הערכות", on: path.startsWith("/assessments") || path.startsWith("/a/") },
+    { to: "/plans", label: "תוכניות בעיר", on: path.startsWith("/plans") },
     { to: "/compare", label: "השוואה", on: path.startsWith("/compare") },
     { to: "/method", label: "שיטה", on: path.startsWith("/method") },
     { to: "/updates", label: "מה חדש", on: path.startsWith("/updates") },

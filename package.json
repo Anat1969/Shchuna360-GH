@@ -1,7 +1,7 @@
 {
   "name": "shchuna360",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,8 @@
     "preview": "vite preview --port 4173",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "e2e": "node tests/e2e.mjs"
+    "e2e": "node tests/e2e.mjs",
+    "prebuild": "node --experimental-strip-types scripts/measure-config.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

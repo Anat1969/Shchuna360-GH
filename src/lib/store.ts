@@ -84,6 +84,7 @@ export const useStore = () =>
 export const getState = () => state;
 
 const editorKey = () => read<string | null>(LS_KEY, null);
+export const getEditorKey = editorKey;
 
 export async function setEditorKey(key: string | null) {
   if (!key) {

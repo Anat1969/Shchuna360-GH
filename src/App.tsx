@@ -7,6 +7,8 @@ import Assessments from "./pages/Assessments";
 import Compare from "./pages/Compare";
 import Landing from "./pages/Landing";
 import Method from "./pages/Method";
+import PlanDetail from "./pages/PlanDetail";
+import Plans from "./pages/Plans";
 import Updates from "./pages/Updates";
 import Workspace from "./pages/Workspace";
 
@@ -22,7 +24,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const titles: Record<string, string> = { "/assessments": "הערכות", "/compare": "השוואה", "/updates": "מה חדש", "/method": "שיטה" };
+    const titles: Record<string, string> = { "/plans": "תוכניות בעיר", "/assessments": "הערכות", "/compare": "השוואה", "/updates": "מה חדש", "/method": "שיטה" };
     document.title = titles[path] ? `${titles[path]} · שכונה 360°` : "שכונה 360° · עיריית אשדוד";
   }, [path]);
 
@@ -44,8 +46,13 @@ export default function App() {
   );
 
   const m = path.match(/^\/a\/([\w-]+)/);
+  const pm = path.match(/^\/plans\/([\w-]+)/);
   const page = m ? (
     <Workspace id={m[1]} key={m[1]} />
+  ) : pm ? (
+    <PlanDetail id={pm[1]} key={pm[1]} />
+  ) : path === "/plans" ? (
+    <Plans />
   ) : path === "/assessments" ? (
     <Assessments />
   ) : path === "/compare" ? (
