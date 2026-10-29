@@ -63,7 +63,7 @@ export default function Assessments() {
         <motion.div className="cards" layout>
           <AnimatePresence>
             {list.map((a, i) => {
-              const r = overall(a.scores, a.stage);
+              const r = overall(a.scores, a.na);
               const stage = STAGES.find((s) => s.id === a.stage)!;
               return (
                 <motion.a
@@ -90,7 +90,7 @@ export default function Assessments() {
                     <h2>{a.title}</h2>
                     <div className="a-bars">
                       {CHAPTERS.map((ch) => {
-                        const c = chapterScore(ch, a.scores, a.stage);
+                        const c = chapterScore(ch, a.scores, a.na);
                         return (
                           <span key={ch.id} title={`${ch.name} ${c.pct}%`}>
                             <i style={{ width: `${c.pct}%`, background: ch.color }} />

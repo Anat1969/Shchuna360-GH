@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bar, Num, Ring } from "../components/Charts";
 import IsoCity from "../components/IsoCity";
 import { usePageMenu } from "../components/TopBar";
 import { Modal, Segmented, fmtDate, toast } from "../components/UI";
 import { ALL_METRICS, CHAPTERS, STAGES, type Chapter, type Metric } from "../data/chapters";
+import { OFFICIAL } from "../data/official";
 import { linkProps, navigate, setQuery, useLocation } from "../lib/router";
 import { chapterScore, overall } from "../lib/score";
+import { toPoints } from "../data/chapters";
 import { create, history, push, quarterName, remove, update, useStore, type Assessment } from "../lib/store";
 import Dashboard from "./Dashboard";
 import Report from "./Report";
@@ -71,7 +73,7 @@ export default function Workspace({ id }: { id: string }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (!a || !m || t.closest("input,textarea,select")) return;
-      if (/^[0-4]$/.test(e.key) && Number(e.key) <= m.maxScore) {
+      if (/^[0-9]$/.test(e.key) && Number(e.key) <= m.maxScore && !a.na[m.id]) {
         update(a.id, { scores: { ...a.scores, [m.id]: Number(e.key) } });
       } else if (e.key === "Escape") setQuery({ m: null });
     };
@@ -92,7 +94,7 @@ export default function Workspace({ id }: { id: string }) {
     );
   }
 
-  const o = overall(a.scores, a.stage);
+  const o = overall(a.scores, a.na);
   const chapter = CHAPTERS.find((c) => String(c.id) === tab);
   const set = (patch: Partial<Assessment>) => !readOnly && update(a.id, patch);
 
@@ -130,16 +132,17 @@ export default function Workspace({ id }: { id: string }) {
           <div className="ring-wrap">
             <Ring pct={o.pct} color={o.grade.color} size={92} stroke={8} target={a.target} />
             <b style={{ color: o.grade.color }}>
-              <Num value={o.pct} suffix="%" />
+              <Num value={o.points} />
+              <small className="ring-of">/120</small>
             </b>
           </div>
           <div>
-            <div className="mono muted">ציון כולל</div>
+            <div className="mono muted">ניקוד כולל · {o.pct}%</div>
             <div className="grade" style={{ color: o.grade.color }}>
               {o.grade.label}
             </div>
             <div className="muted small">
-              {o.scored}/{o.total} מדדים, יעד {a.target}%
+              {o.scored}/{o.total} מדדים, יעד {toPoints(a.target)} נקודות
             </div>
           </div>
         </div>
@@ -149,7 +152,7 @@ export default function Workspace({ id }: { id: string }) {
 
       <nav className="tabs" aria-label="פרקים">
         {CHAPTERS.map((ch) => {
-          const c = chapterScore(ch, a.scores, a.stage);
+          const c = chapterScore(ch, a.scores, a.na);
           const on = tab === String(ch.id);
           return (
             <button key={ch.id} type="button" className={on ? "on" : ""} style={{ ["--c" as string]: ch.color }} onClick={() => setQuery({ tab: String(ch.id), m: null })}>
@@ -176,7 +179,7 @@ export default function Workspace({ id }: { id: string }) {
               <main className="ws-main">
                 <div className="ws-tools">
                   <div className="stage-note" style={{ background: chapter.bg, color: chapter.color }}>
-                    <b>שלב {STAGES[a.stage - 1].letter}:</b> מדדים בגוון בהיר אינם רלוונטיים לשלב ואינם נספרים. מקשים 0 עד 4 מנקדים את המדד הפתוח.
+                    <b>שלב {STAGES[a.stage - 1].letter}:</b> כל המדדים חלים בכל שלב{a.stage === 3 ? ", ובשלב ג׳ נוספות דרישות ביצוע" : ""}. מדד שאינו חל על הפרויקט מסמנים "לא רלוונטי לפרויקט". מקשי הספרות מנקדים את המדד הפתוח.
                   </div>
                   <Segmented
                     label="סינון מדדים"
@@ -189,7 +192,7 @@ export default function Workspace({ id }: { id: string }) {
                   />
                 </div>
                 {chapter.sections.map((s) => {
-                  const ms = s.metrics.filter((m) => filter === "all" || (!(a.scores[m.id] > 0) && m.stages.includes(a.stage)));
+                  const ms = s.metrics.filter((m) => filter === "all" || (!(a.scores[m.id] > 0) && !a.na[m.id]));
                   if (!ms.length) return null;
                   return (
                     <section key={s.name} className="sec">
@@ -218,7 +221,7 @@ export default function Workspace({ id }: { id: string }) {
                   <div className="mono muted">מודל השכונה</div>
                   <IsoCity
                     scores={a.scores}
-                    stage={a.stage}
+                    na={a.na}
                     focus={open}
                     onPick={(mid) => {
                       const m = ALL_METRICS.find((x) => x.id === mid)!;
@@ -229,7 +232,7 @@ export default function Workspace({ id }: { id: string }) {
                 </div>
                 <div className="side-card">
                   {CHAPTERS.map((ch) => {
-                    const c = chapterScore(ch, a.scores, a.stage);
+                    const c = chapterScore(ch, a.scores, a.na);
                     return (
                       <div key={ch.id} className="side-ch">
                         <div className="row">
@@ -254,13 +257,14 @@ export default function Workspace({ id }: { id: string }) {
       <Modal open={!!hist} onClose={() => setHist(null)} title="היסטוריית גרסאות">
         {hist?.length ? (
           <ol className="hist">
-            {hist.map((h) => {
-              const r = overall(h.snapshot.scores, h.snapshot.stage);
+            {hist.map((h, i) => {
+              const r = overall(h.snapshot.scores, h.snapshot.na);
+              const changes = diffScores(hist[i + 1]?.snapshot, h.snapshot);
               return (
                 <li key={h.id}>
                   <span className="mono">{fmtDate(h.created_at)}</span>
                   <span>{h.editor}</span>
-                  <b style={{ color: r.grade.color }}>{r.pct}%</b>
+                  <b style={{ color: r.grade.color }}>{r.points}/120</b>
                   <button
                     type="button"
                     className="ghost"
@@ -273,6 +277,13 @@ export default function Workspace({ id }: { id: string }) {
                   >
                     שחזור
                   </button>
+                  {changes.length > 0 && (
+                    <div className="hist-diff">
+                      {changes.map((c) => (
+                        <span key={c}>{c}</span>
+                      ))}
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -308,6 +319,20 @@ export default function Workspace({ id }: { id: string }) {
   );
 }
 
+// What changed between two saved versions: scores and "not relevant" marks, in booklet order.
+function diffScores(prev: Assessment | undefined, cur: Assessment) {
+  if (!prev) return ["גרסה ראשונה"];
+  const out: string[] = [];
+  for (const m of ALL_METRICS) {
+    const a = prev.scores?.[m.id] ?? 0;
+    const b = cur.scores?.[m.id] ?? 0;
+    if (a !== b) out.push(`${m.name}: מ-${a} ל-${b}`);
+    if (!!prev.na?.[m.id] !== !!cur.na?.[m.id]) out.push(`${m.name}: ${cur.na?.[m.id] ? "סומן לא רלוונטי" : "חזר לחישוב"}`);
+  }
+  if (prev.stage !== cur.stage) out.push(`שלב: מ-${STAGES[prev.stage - 1].letter} ל-${STAGES[cur.stage - 1].letter}`);
+  return out;
+}
+
 function SyncState({ a }: { a: Assessment }) {
   const { editor, saving } = useStore();
   const text = !editor
@@ -329,16 +354,16 @@ const LEVEL = (pct: number) =>
 
 function MetricCard({ m, ch, a, open, onToggle, readOnly }: { m: Metric; ch: Chapter; a: Assessment; open: boolean; onToggle: () => void; readOnly: boolean }) {
   const score = a.scores[m.id] ?? 0;
-  const relevant = m.stages.includes(a.stage);
+  const excluded = !!a.na[m.id];
   const pct = Math.round((score / m.maxScore) * 100);
   const note = a.notes[m.id] ?? "";
-  const stages = useMemo(() => STAGES.filter((s) => m.stages.includes(s.id)).map((s) => s.letter).join(" "), [m]);
+  const off = OFFICIAL[m.id];
 
   return (
     <motion.article
       id={`m-${m.id}`}
       layout
-      className={`metric ${open ? "open" : ""} ${relevant ? "" : "off"}`}
+      className={`metric ${open ? "open" : ""} ${excluded ? "off" : ""}`}
       style={{ ["--c" as string]: ch.color, ["--a" as string]: ch.accent, ["--bg" as string]: ch.bg }}
       transition={{ layout: { type: "spring", stiffness: 300, damping: 30 } }}
     >
@@ -347,12 +372,12 @@ function MetricCard({ m, ch, a, open, onToggle, readOnly }: { m: Metric; ch: Cha
         <span className="metric-name">
           <b>{m.name}</b>
           <small className="mono">
-            {relevant ? `שלבים ${stages}` : "לא רלוונטי לשלב זה"}
+            {excluded ? "לא רלוונטי לפרויקט" : `עמ׳ ${m.page} במדריך`}
             {note && " · מתועד"}
           </small>
         </span>
         <span className="metric-score">
-          {score}
+          {excluded ? "—" : score}
           <small>/{m.maxScore}</small>
         </span>
       </button>
@@ -364,10 +389,33 @@ function MetricCard({ m, ch, a, open, onToggle, readOnly }: { m: Metric; ch: Cha
           <motion.div className="metric-body" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
             <div className="metric-in">
               <p className="metric-full">{m.full}</p>
-              <p>{m.description}</p>
-              <div className="insight">
-                <div className="mono">תובנה מהשטח, טרם אומתה</div>
+              <p>{off?.intro || m.description}</p>
+              {off && (
+                <div className="official">
+                  <div className="mono">הדרישה הרשמית · שכונה 360° גרסה 2.0, עמ׳ {m.page}</div>
+                  <p>{off.requirements}</p>
+                  {off.stageC && (
+                    <p className={a.stage === 3 ? "" : "muted"}>
+                      <b>בשלב ג׳ בנוסף:</b> {off.stageC}
+                    </p>
+                  )}
+                </div>
+              )}
+              <details className="insight">
+                <summary className="mono">תובנה מהשטח, טרם אומתה</summary>
                 <p>{m.insight}</p>
+              </details>
+              <div className="row-start na-row">
+                <button
+                  type="button"
+                  className={`ghost ${excluded ? "pressed" : ""}`}
+                  aria-pressed={excluded}
+                  disabled={readOnly}
+                  onClick={() => update(a.id, { na: { ...a.na, [m.id]: !excluded } })}
+                >
+                  {excluded ? "המדד חל על הפרויקט" : "לא רלוונטי לפרויקט"}
+                </button>
+                {off?.eligibility && <span className="muted small">{off.eligibility}</span>}
               </div>
               <div className="mono muted small">ניקוד</div>
               <div className="score-row" role="radiogroup" aria-label={`ניקוד ${m.name}`}>
@@ -377,7 +425,7 @@ function MetricCard({ m, ch, a, open, onToggle, readOnly }: { m: Metric; ch: Cha
                     type="button"
                     role="radio"
                     aria-checked={score === v}
-                    disabled={readOnly}
+                    disabled={readOnly || excluded}
                     className={score === v ? "on" : ""}
                     whileTap={{ scale: 0.92 }}
                     onClick={() => update(a.id, { scores: { ...a.scores, [m.id]: v } })}

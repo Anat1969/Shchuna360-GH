@@ -34,7 +34,7 @@ const shade = (hex: string, f: number) => {
 
 type Props = {
   scores: Scores;
-  stage?: number;
+  na?: Record<string, boolean>;
   focus?: number | null;
   onPick?: (id: number) => void;
   autoRotate?: boolean;
@@ -42,7 +42,7 @@ type Props = {
   label?: string;
 };
 
-export default function IsoCity({ scores, stage, focus, onPick, autoRotate, className, label }: Props) {
+export default function IsoCity({ scores, na, focus, onPick, autoRotate, className, label }: Props) {
   const [angle, setAngle] = useState(0);
   const target = useRef(0);
   const [heights, setHeights] = useState<number[]>(() => ALL_METRICS.map(() => 0));
@@ -53,7 +53,8 @@ export default function IsoCity({ scores, stage, focus, onPick, autoRotate, clas
     () =>
       ALL_METRICS.map((m) => {
         const s = Math.min(scores[m.id] ?? 0, m.maxScore);
-        return s ? 10 + (s / m.maxScore) * MAXH * (0.55 + m.maxScore * 0.11) : 3;
+        // height by share of the metric's maximum, with a mild bonus for heavier metrics
+        return s ? 10 + (s / m.maxScore) * MAXH * (0.6 + Math.min(m.maxScore, 7) * 0.06) : 3;
       }),
     [scores],
   );
@@ -142,7 +143,7 @@ export default function IsoCity({ scores, stage, focus, onPick, autoRotate, clas
         ))}
         {blocks.map(({ m, i, corners }) => {
           const h = heights[i];
-          const off = stage != null && !m.stages.includes(stage);
+          const off = !!na?.[m.id];
           const rated = (scores[m.id] ?? 0) > 0;
           const base = off ? "#c9ced4" : rated ? m.chapter.color : "#dfe3e8";
           const top = rated && !off ? shade(m.chapter.accent, 0.15) : shade(base, 0.35);

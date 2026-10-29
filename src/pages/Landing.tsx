@@ -4,10 +4,18 @@ import { Num } from "../components/Charts";
 import IsoCity from "../components/IsoCity";
 import { Reveal } from "../components/UI";
 import { ALL_METRICS, CHAPTERS, STAGES } from "../data/chapters";
+import { OFFICIAL } from "../data/official";
 import { linkProps, navigate } from "../lib/router";
 import { overall, type Scores } from "../lib/score";
 import { create, quarterName, useStore } from "../lib/store";
 import { CHANGES } from "./Updates";
+
+// What the official document checks at each milestone (v2.0, "אבני דרך").
+const STAGE_TEST: Record<number, string> = {
+  1: "תוכנית שמכוחה לא ניתן להוציא היתרי בנייה: מתאר, מתאר כוללנית, תוכנית שלד. כאן נקבעים החזון והמטרות.",
+  2: "תוכנית שמכוחה ניתן להוציא היתרי בנייה. נבדק שהתוכנית המפורטת יוצרת את התנאים ליישום הדרישות.",
+  3: "אישור סופי אחרי תעודת גמר ל-80% מהמבנים לפחות. נבדק שהדרישות בוצעו בפועל, ובחלק מהמדדים נוספות דרישות.",
+};
 
 // A plausible plan that keeps evolving, so the hero model is never static.
 const demo = (seed: number): Scores =>
@@ -33,7 +41,7 @@ export default function Landing() {
   }, []);
 
   const scores = demo(seed);
-  const o = overall(scores, 2);
+  const o = overall(scores);
   const release = CHANGES.find((c) => c.items.length >= 3) ?? CHANGES[0];
   const published = items.filter((a) => a.status === "published").slice(0, 3);
 
@@ -49,7 +57,7 @@ export default function Landing() {
         </div>
         <motion.div className="hero-copy" style={{ opacity: fade }}>
           <motion.div className="eyebrow mono" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            עיריית אשדוד <span className="sep" /> כלי הערכה לשכונות <span className="sep" /> ILGBC
+            עיריית אשדוד <span className="sep" /> כלי הערכה לשכונות <span className="sep" /> שכונה 360° גרסה 2.0
           </motion.div>
           <h1 className="display">
             {["כל שכונה.", "44 מדדים.", "תמונה אחת."].map((w, i) => (
@@ -78,7 +86,7 @@ export default function Landing() {
           </motion.div>
         </motion.div>
         <motion.div className="hero-model" style={{ y: lift, rotateX: tilt }} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}>
-          <IsoCity scores={scores} stage={2} autoRotate label="מודל הדגמה: הבניינים עולים ויורדים עם הניקוד" />
+          <IsoCity scores={scores} autoRotate label="מודל הדגמה: הבניינים עולים ויורדים עם הניקוד" />
           <div className="hero-readout glass">
             <span className="mono">מודל הדגמה</span>
             <b style={{ color: o.grade.color }}>
@@ -175,21 +183,22 @@ export default function Landing() {
       <section className="block">
         <Reveal>
           <div className="kicker mono">03 / שלבי התכנון</div>
-          <h2 className="h2">אותה שכונה, שלוש עדשות</h2>
+          <h2 className="h2">אותם 44 מדדים, שלוש נקודות בדיקה</h2>
         </Reveal>
         <div className="stages3">
           {STAGES.map((s, i) => {
-            const count = ALL_METRICS.filter((m) => m.stages.includes(s.id)).length;
+            const extra = s.id === 3 ? ALL_METRICS.filter((m) => OFFICIAL[m.id]?.stageC) : [];
             return (
               <Reveal key={s.id} delay={i * 0.1} className="stage-card">
                 <span className="stage-letter">{s.letter}</span>
                 <div>
                   <h3>{s.label}</h3>
-                  <p className="mono">{count} מדדים רלוונטיים</p>
+                  <p>{STAGE_TEST[s.id]}</p>
+                  {s.id === 3 && extra.length > 0 && <p className="mono">{extra.length} מדדים מוסיפים דרישות ביצוע</p>}
                 </div>
                 <div className="stage-dots" aria-hidden="true">
                   {ALL_METRICS.map((m) => (
-                    <i key={m.id} style={{ background: m.stages.includes(s.id) ? m.chapter.color : "var(--track)" }} />
+                    <i key={m.id} style={{ background: s.id < 3 || OFFICIAL[m.id]?.stageC ? m.chapter.color : "var(--track)" }} />
                   ))}
                 </div>
               </Reveal>
@@ -206,7 +215,7 @@ export default function Landing() {
           </Reveal>
           <div className="pub-list">
             {published.map((a) => {
-              const r = overall(a.scores, a.stage);
+              const r = overall(a.scores, a.na);
               return (
                 <a key={a.id} className="pub" {...linkProps(`/a/${a.id}?tab=dash`)}>
                   <span className="mono">{quarterName(a.quarter_id)}</span>

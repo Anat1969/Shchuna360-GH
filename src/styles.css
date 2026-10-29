@@ -2018,3 +2018,70 @@ blockquote {
   margin-inline-start: auto;
   margin-inline-end: 8px;
 }
+
+/* ---------- v3: official scale ---------- */
+.ring-of {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.ring-wrap b {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+}
+.official {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: light-dark(#f3f6f9, #18232e);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  display: grid;
+  gap: 6px;
+}
+.official .mono {
+  color: var(--c);
+}
+.official p {
+  margin: 0;
+}
+details.insight summary {
+  cursor: pointer;
+  color: var(--c);
+}
+details.insight p {
+  margin-top: 6px;
+}
+.na-row {
+  align-items: center;
+}
+.ghost.pressed {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.conv {
+  color: #8a5a14;
+}
+.hist li {
+  flex-wrap: wrap;
+}
+.hist-diff {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.hist-diff span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+details.insight summary {
+  list-style: none;
+}
+details.insight summary::-webkit-details-marker {
+  display: none;
+}

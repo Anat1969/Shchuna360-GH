@@ -4,8 +4,8 @@ import { chapterScore, overall, pathToTarget, sectionAxes } from "../lib/score";
 import { quarterName, type Assessment } from "../lib/store";
 
 export default function Report({ a }: { a: Assessment }) {
-  const o = overall(a.scores, a.stage);
-  const path = pathToTarget(a.scores, a.stage, a.target);
+  const o = overall(a.scores, a.na);
+  const path = pathToTarget(a.scores, a.na, a.target);
   const stage = STAGES[a.stage - 1];
   const date = new Intl.DateTimeFormat("he-IL", { dateStyle: "long" }).format(new Date(a.updated_at));
 
@@ -30,15 +30,18 @@ export default function Report({ a }: { a: Assessment }) {
 
         <section className="paper-sum">
           <div className="big" style={{ color: o.grade.color }}>
-            {o.pct}%<small>{o.grade.label}</small>
+            {o.points}
+            <small>
+              מתוך 120 · {o.grade.label} · {o.pct}%
+            </small>
           </div>
           <div className="paper-radar">
-            <Radar series={[{ axes: sectionAxes(a.scores, a.stage), color: o.grade.color }]} size={300} />
+            <Radar series={[{ axes: sectionAxes(a.scores, a.na), color: o.grade.color }]} size={300} />
           </div>
           <table className="tbl">
             <tbody>
               {CHAPTERS.map((ch) => {
-                const c = chapterScore(ch, a.scores, a.stage);
+                const c = chapterScore(ch, a.scores, a.na);
                 return (
                   <tr key={ch.id}>
                     <td style={{ color: ch.color, fontWeight: 600 }}>{ch.name}</td>
@@ -82,13 +85,13 @@ export default function Report({ a }: { a: Assessment }) {
               <tbody>
                 {ch.sections.flatMap((s) =>
                   s.metrics.map((m) => {
-                    const rel = m.stages.includes(a.stage);
+                    const rel = !a.na[m.id];
                     return (
                       <tr key={m.id} className={rel ? "" : "dim"}>
                         <td>
                           <span className="mono">{String(m.id).padStart(2, "0")}</span> {m.full}
                         </td>
-                        <td className="mono">{rel ? `${a.scores[m.id] ?? 0}/${m.maxScore}` : "לא רלוונטי"}</td>
+                        <td className="mono">{rel ? `${a.scores[m.id] ?? 0}/${m.maxScore}` : "לא רלוונטי לפרויקט"}</td>
                         <td>{a.notes[m.id] || <span className="muted">אין תיעוד</span>}</td>
                       </tr>
                     );

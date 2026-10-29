@@ -1,8 +1,11 @@
-import { ALL_METRICS, CHAPTERS, getGrade, type Chapter } from "../data/chapters";
+import { ALL_METRICS, CHAPTERS, getGrade, toPoints, type Chapter } from "../data/chapters";
 
 export type Scores = Record<string, number>;
+// Metrics marked "not relevant to this project" (e.g. no buildings to preserve, metric 7),
+// as the official v2.0 document allows. They leave the denominator.
+export type Excluded = Record<string, boolean>;
 
-const relevant = (stage: number) => ALL_METRICS.filter((m) => m.stages.includes(stage));
+const relevant = (na: Excluded = {}) => ALL_METRICS.filter((m) => !na[m.id]);
 
 const sum = (ms: { id: number; maxScore: number }[], scores: Scores) => {
   let got = 0;
@@ -14,25 +17,25 @@ const sum = (ms: { id: number; maxScore: number }[], scores: Scores) => {
   return { got, max, pct: max ? Math.round((got / max) * 100) : 0 };
 };
 
-// Metrics that do not apply to the chosen planning stage are left out of the
-// denominator. The original app counted them, which capped stage A and C scores.
-export function overall(scores: Scores, stage: number) {
-  const r = sum(relevant(stage), scores);
-  const scored = relevant(stage).filter((m) => (scores[m.id] ?? 0) > 0).length;
-  return { ...r, grade: getGrade(r.pct), scored, total: relevant(stage).length };
+// Every metric applies at every planning stage (official v2.0); only metrics excluded
+// for this project leave the denominator.
+export function overall(scores: Scores, na: Excluded = {}) {
+  const r = sum(relevant(na), scores);
+  const scored = relevant(na).filter((m) => (scores[m.id] ?? 0) > 0).length;
+  return { ...r, points: toPoints(r.pct), grade: getGrade(r.pct), scored, total: relevant(na).length };
 }
 
-export function chapterScore(ch: Chapter, scores: Scores, stage: number) {
+export function chapterScore(ch: Chapter, scores: Scores, na: Excluded = {}) {
   return sum(
-    ch.sections.flatMap((s) => s.metrics).filter((m) => m.stages.includes(stage)),
+    ch.sections.flatMap((s) => s.metrics).filter((m) => !na[m.id]),
     scores,
   );
 }
 
-export function sectionAxes(scores: Scores, stage: number) {
+export function sectionAxes(scores: Scores, na: Excluded = {}) {
   return CHAPTERS.flatMap((ch) =>
     ch.sections.map((s) => {
-      const ms = s.metrics.filter((m) => m.stages.includes(stage));
+      const ms = s.metrics.filter((m) => !na[m.id]);
       return { label: s.name, color: ch.color, ...sum(ms, scores), empty: ms.length === 0 };
     }),
   );
@@ -43,8 +46,8 @@ export type Step = { id: number; name: string; from: number; to: number; color: 
 // Route to the target: the fewest single-point raises that reach it. Heuristic,
 // stated in the UI: the first point on a weak metric is usually cheaper than the
 // last point on a strong one, so raises go to the lowest-percentage metrics first.
-export function pathToTarget(scores: Scores, stage: number, target: number) {
-  const ms = relevant(stage);
+export function pathToTarget(scores: Scores, na: Excluded, target: number) {
+  const ms = relevant(na);
   const { got, max } = sum(ms, scores);
   const need = Math.max(0, Math.ceil((target * max) / 100) - got);
   const cur: Scores = { ...scores };
@@ -61,13 +64,13 @@ export function pathToTarget(scores: Scores, stage: number, target: number) {
   return { need, steps: [...raised.values()], reachable: need <= max - got };
 }
 
-export function strengths(scores: Scores, stage: number) {
-  const rated = relevant(stage)
+export function strengths(scores: Scores, na: Excluded = {}) {
+  const rated = relevant(na)
     .filter((m) => (scores[m.id] ?? 0) > 0)
     .map((m) => ({ ...m, pct: Math.round(((scores[m.id] ?? 0) / m.maxScore) * 100) }));
   return {
     top: rated.filter((m) => m.pct >= 67).sort((a, b) => b.pct - a.pct).slice(0, 4),
     bottom: rated.filter((m) => m.pct < 67).sort((a, b) => a.pct - b.pct).slice(0, 4),
-    unrated: relevant(stage).filter((m) => (scores[m.id] ?? 0) === 0),
+    unrated: relevant(na).filter((m) => (scores[m.id] ?? 0) === 0),
   };
 }

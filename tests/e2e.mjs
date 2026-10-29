@@ -114,12 +114,19 @@ await page.locator("#m-13 .score-row button", { hasText: "3" }).click();
 await page.locator("#n-13").fill("תשריט 1:500, חזיתות מסחריות לאורך הרחוב");
 await page.keyboard.press("Escape");
 await page.locator("#m-14 .metric-head").click();
-await page.keyboard.press("4");
+await page.keyboard.press("3");
 await page.waitForTimeout(300);
-const stored = await page.evaluate((id) => JSON.parse(localStorage.getItem("shchuna.assessments.v2")).find((a) => a.id === id), id);
-ok(stored?.scores?.[13] === 3 && stored?.scores?.[14] === 4, "scores saved locally (click and keyboard)");
+const stored = await page.evaluate((id) => JSON.parse(localStorage.getItem("shchuna.assessments.v3")).find((a) => a.id === id), id);
+ok(stored?.scores?.[13] === 3 && stored?.scores?.[14] === 3, "scores saved locally (click and keyboard)");
 ok(stored?.stage === 3 && stored?.quarter_id === "q-g" && stored?.notes?.[13]?.includes("תשריט"), "stage, quarter and evidence saved");
-ok((await page.locator("#m-4").getAttribute("class"))?.includes("off"), "stage-irrelevant metrics dimmed");
+ok(!(await page.locator("#m-4").getAttribute("class"))?.includes("off"), "every metric applies at every stage (official v2.0)");
+await page.locator("#m-7 .metric-head").click();
+await page.locator("#m-7 .na-row button").click();
+await page.waitForTimeout(300);
+const na = await page.evaluate((id) => JSON.parse(localStorage.getItem("shchuna.assessments.v3")).find((a) => a.id === id).na, id);
+ok(na?.[7] === true && (await page.locator("#m-7").getAttribute("class"))?.includes("off"), "metric marked not relevant to the project");
+ok((await page.locator(".ws-score .ring-of").innerText()).includes("120"), "score shown out of 120");
+await page.keyboard.press("Escape");
 await page.locator(".ws-side .iso-b[data-metric='22']").click();
 ok(page.url().includes("tab=2") && page.url().includes("m=22"), "clicking a building opens its metric");
 await page.screenshot({ path: "screens/workspace.png" });
@@ -191,7 +198,7 @@ ok((await page.locator('a[href^="https://ashdod-ma-nivne.vercel.app/p/"]').count
 await page.screenshot({ path: "screens/plan-detail.png" });
 await page.getByRole("button", { name: "פתיחה כהערכה לעריכה" }).click();
 await page.waitForURL(/\/a\/[0-9a-f-]{36}/);
-const seeded = await page.evaluate(() => JSON.parse(localStorage.getItem("shchuna.assessments.v2"))[0]);
+const seeded = await page.evaluate(() => JSON.parse(localStorage.getItem("shchuna.assessments.v3"))[0]);
 ok(Object.keys(seeded.scores).length === Object.values(SCORE.metrics).filter((e) => e.score != null).length && Object.keys(seeded.notes).length > 0, "plan opens as an editable assessment with its scores");
 
 await page.goto(BASE + "/method");
@@ -204,7 +211,7 @@ await page.waitForTimeout(500);
 await menu(page, "מחיקת הערכה");
 await page.locator("dialog[open] .btn.danger").click();
 await page.waitForURL(BASE + "/assessments");
-ok(!(await page.evaluate((id) => localStorage.getItem("shchuna.assessments.v2").includes(id), id)), "delete removes the assessment");
+ok(!(await page.evaluate((id) => localStorage.getItem("shchuna.assessments.v3").includes(id), id)), "delete removes the assessment");
 
 // Read-only published assessment for a visitor
 await menu(page, "יציאה ממצב עורך");
