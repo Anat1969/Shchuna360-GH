@@ -73,16 +73,19 @@ Deno.serve(async (req) => {
     const sources = ['story'];
     if (model) sources.push('plan_models');
     // The provisions are the binding text; attach them when the app holds a PDF.
-    // The provisions first, then the building appendix: the order in plan_media is arbitrary.
-    const rank = (c: string) => (/הוראות/.test(c) ? 0 : /נספח בינוי/.test(c) ? 1 : 9);
+    // Order: provisions, social appendix (metrics 2 and 6), building appendix. plan_media order is arbitrary.
+    const rank = (c: string) => (/הוראות/.test(c) ? 0 : /חברתי|תסקיר/.test(c) ? 1 : /נספח בינוי/.test(c) ? 2 : 9);
     const docs = (media ?? []).filter((m) => m.kind === 'document' && rank(m.caption ?? '') < 9)
       .sort((x, y) => rank(x.caption ?? '') - rank(y.caption ?? '') || (x.caption ?? '').localeCompare(y.caption ?? ''));
-    for (const d of docs.slice(0, 2)) {
+    for (const d of docs.slice(0, 3)) {
       const url = d.url ? (d.url.startsWith('/') ? MA_NIVNE + d.url : d.url)
         : `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/plan-media/${d.storage_path}`;
       const r = await fetch(url);
       if (!r.ok) continue;
-      content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64(await r.arrayBuffer()) }, title: d.caption ?? 'מסמך' });
+      const buf = await r.arrayBuffer();
+      // A missing static file comes back as the SPA's index.html with status 200: send only real PDFs.
+      if (new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(5, buf.byteLength))) !== '%PDF-') continue;
+      content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64(buf) }, title: d.caption ?? 'מסמך' });
       sources.push(d.caption ?? 'pdf');
     }
     const { story, ...record } = plan;
