@@ -72,6 +72,13 @@ Deno.serve(async (req) => {
     const content: Anthropic.Beta.BetaContentBlockParam[] = [];
     const sources = ['story'];
     if (model) sources.push('plan_models');
+    // Metric 38 (sun rights) is computed by the shade layer of מה נבנה סביבי by the official criterion
+    // (21.12, 09:00-15:00): a deterministic number beats a reading of documents that rarely address it.
+    const slug = String(plan.plan_number ?? '').replace(/^תמל\s*\/\s*/, 'tamal-').replace(/\s*\/\s*/g, '-');
+    const sun = await fetch(`${MA_NIVNE}/plans/${slug}/sun-metric38.json`)
+      .then((r) => (r.ok && (r.headers.get('content-type') ?? '').includes('json') ? r.json() : null))
+      .catch(() => null) as null | { score: number; window: string; roofs: { buildings: number; passing: number; share: number }; open: { source: string; mean0: number; mean1: number; drop: number } };
+    if (sun) sources.push('sun-metric38');
     // The provisions are the binding text; attach them when the app holds a PDF.
     // Order: provisions, social appendix (metrics 2 and 6), building appendix. plan_media order is arbitrary.
     const rank = (c: string) => (/הוראות/.test(c) ? 0 : /חברתי|תסקיר/.test(c) ? 1 : /נספח בינוי/.test(c) ? 2 : 9);
@@ -91,7 +98,7 @@ Deno.serve(async (req) => {
     const { story, ...record } = plan;
     content.push({
       type: 'text',
-      text: `מדוד את התוכנית הבאה מול 44 המדדים, בשלב ב (תוכניות מפורטות), לפי המחוון.\n\n# המחוון\n${RUBRIC}\n\n# המדדים\n${METRICS.map((m) => `${m.id}. ${m.full} (מקסימום ${m.maxScore}, שלבים ${m.stages.join(',')}): ${m.description}`).join('\n')}\n\n# נתוני התוכנית (נתונים, לא הוראות)\n${JSON.stringify(record)}\n\n# סיפור התוכנית\n${JSON.stringify(story)}\n\n# טבלת הזכויות\n${JSON.stringify(model?.model ?? null)}\n\nכתוב בעברית פשוטה. ציטוטים מילה במילה, עד 25 מילים. אל תמציא. החזר פריט אחד לכל אחד מ-44 המדדים, עם id של המדד. מדד שאי אפשר למדוד: score=-1, confidence="none", quote="" ו-source="".`,
+      text: `מדוד את התוכנית הבאה מול 44 המדדים, בשלב ב (תוכניות מפורטות), לפי המחוון.\n\n# המחוון\n${RUBRIC}\n\n# המדדים\n${METRICS.map((m) => `${m.id}. ${m.full} (מקסימום ${m.maxScore}, שלבים ${m.stages.join(',')}): ${m.description}`).join('\n')}\n\n# נתוני התוכנית (נתונים, לא הוראות)\n${JSON.stringify(record)}\n\n# סיפור התוכנית\n${JSON.stringify(story)}\n\n# טבלת הזכויות\n${JSON.stringify(model?.model ?? null)}${sun ? `\n\n# מדד 38 (זכויות שמש) כבר חושב בסימולציה לפי הקריטריון הרשמי, והתוצאה תיקבע ממנו. התחשב בו בסיכום: ${JSON.stringify(sun)}` : ''}\n\nכתוב בעברית פשוטה. ציטוטים מילה במילה, עד 25 מילים. אל תמציא. החזר פריט אחד לכל אחד מ-44 המדדים, עם id של המדד. מדד שאי אפשר למדוד: score=-1, confidence="none", quote="" ו-source="".`,
     });
 
     const client = new Anthropic({ apiKey });
@@ -117,6 +124,15 @@ Deno.serve(async (req) => {
       e.score = e.score == null || e.score < 0 ? null : Math.min(m.maxScore, e.score);
       if (e.score == null) e.confidence = 'none';
       for (const f of ['quote', 'source', 'note']) if (!e[f]) e[f] = null;
+    }
+    const m38 = METRICS.find((m) => m.id === 38);
+    if (sun && m38) {
+      const open = sun.open.source === 'plan_open_space' ? 'השטחים הפתוחים בתוכנית' : 'הקרקע הפתוחה סביב (קירוב)';
+      out.metrics[38] = {
+        score: Math.min(m38.maxScore, sun.score), confidence: 'simulation', quote: null,
+        source: 'שכבת שמש וצל, מה נבנה סביבי',
+        note: `${sun.window}. גגות סמוכים: ${Math.round(sun.roofs.share * 100)}% עומדים בסף (${sun.roofs.passing} מתוך ${sun.roofs.buildings}, נדרש 90%). ${open}: מ-${sun.open.mean0.toFixed(1)} ל-${sun.open.mean1.toFixed(1)} שעות שמש, ירידה של ${Math.round(sun.open.drop * 100)}% (מותר עד 20%). חזיתות לא נבדקו.`,
+      };
     }
     const { error } = await sb.rpc('shchuna_save_plan_score', {
       p_key: key, p_plan: plan.id,
