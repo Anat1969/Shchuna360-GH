@@ -7,7 +7,7 @@ import { linkProps, navigate, setQuery, useLocation } from "../lib/router";
 import { MA_NIVNE, STATUS, measure, measureAuto, sectionHeat, usePlans } from "../lib/plans";
 import { create, quarterName, useStore } from "../lib/store";
 
-const CONF: Record<string, string> = { document: "ציטוט ישיר", inferred: "הסקה מהנתונים", none: "לא ניתן למדוד" };
+const CONF: Record<string, string> = { document: "ציטוט ישיר", inferred: "הסקה מהנתונים", simulation: "חישוב בסימולציה", none: "לא ניתן למדוד" };
 const QUOTE: Record<string, string> = { exact: "ציטוט מדויק", condensed: "תמצית מהמקור", scan: "תעתיק מסריקה" };
 const METHOD: Record<string, string> = { "claude-session": "קריאת Claude", auto: "מדידה אוטומטית", manual: "מדידה ידנית" };
 

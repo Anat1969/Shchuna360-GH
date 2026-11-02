@@ -10,7 +10,7 @@ const FN = "https://cbhexpybdggwzyakgagd.supabase.co/functions/v1/shchuna-measur
 
 export type Evidence = {
   score: number | null;
-  confidence: "document" | "inferred" | "none";
+  confidence: "document" | "inferred" | "simulation" | "none";
   quote: string | null;
   // set by the load check: found verbatim, condensed from the source, or transcribed from a scan
   quote_kind?: "exact" | "condensed" | "scan" | null;
