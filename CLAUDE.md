@@ -50,6 +50,8 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
   קובץ שאינו PDF (למשל index.html כשהקובץ עוד לא נפרס) לא נשלח.
 - מדד 38 (זכויות שמש) נקבע בפונקציה באופן דטרמיניסטי מ-`https://ashdod-ma-nivne.vercel.app/plans/<slug>/sun-metric38.json` (מחושב בריפו HITCHADSHUT, `scripts/shade-metric38.ts`), עם confidence `simulation` ("חישוב בסימולציה"). בלי הקובץ, המודל מודד כרגיל.
 - בדיקת הסכמה (תמל/2022): 29 מתוך 35 זהים, 35 מתוך 35 בהפרש עד נקודה. לחזור עליה אחרי כל שינוי במחוון או בפונקציה.
+  16.11.2026, אחרי שכבות ה-GIS: 28 מתוך 30 זהים, 29 בהפרש עד נקודה. מדד 14 נמדד לראשונה (1). מדד 18 עלה מ-2 ל-5 (המודל זיכה גם על BRT בהרצל).
+  גיבוי המדידות שלפני: `shchuna_plan_scores_backup_20261116`.
 
 ## שכבות GIS עירוניות (מגרסה 3.1)
 - המקור: קבצי shapefile של העירייה ברשת ישראל (ITM). `scripts/gis/convert.py` ממיר כל שכבה ל-`data/gis/<layer>[-N].json`
@@ -58,7 +60,10 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
   חלק 1 מחליף את השכבה. רשומת השכבה (כותרת, קובץ מקור, תאריך) ב-`shchuna_gis_layers`. שכבה חדשה: שורה שם, המרה, טעינה.
 - טבלאות: `shchuna_gis_layers`, `shchuna_gis_features` (props jsonb, geom 2039). קריאה ציבורית. התצוגה `shchuna_gis_walk` היא רשת ההליכה
   (בלי מידרג 8 ו-9 ובלי "חניה ..."). מידרג לפי השמות (הערכה): 1 עורקי, 2 מאסף, 3 מקומי, 8 בין-עירוני, 9 מעבר חניה, 10 מדרחוב.
-- `shchuna_plan_gis(plan)` מחזיר עובדות (מדדים 14, 15, 18, רוחבים, קדסטר) ולא זורק שגיאה; כל חלק עם שגיאה משלו.
+- עשר שכבות (16.11.2026): bus_stops, streets, street_widths, gushim, parcels, lots (ייעודים), sidewalks (סקר 2021, חלקי),
+  light_poles, traffic_lights, rova. השכבות משותפות ל"הרחובות הטובים" (NiceStreets-GH, `street_profile` ומנוע הבדיקה 0.2).
+- `shchuna_plan_gis(plan)` מחזיר עובדות (מדדים 10, 14, 15, 18, רוחבים, קדסטר) ולא זורק שגיאה; כל חלק עם שגיאה משלו.
+  היא עוטפת את `shchuna_plan_gis_core` ומוסיפה `services` מ-`shchuna_plan_services` (מדד 10, מגרשי מסחר ומבני ציבור עד 250 מ').
   `shchuna_plan_gis_map(plan)` מחזיר נתיבי SVG למפה בדף התוכנית (`src/components/CityLayers.tsx`).
 - המדידה האוטומטית מקבלת את העובדות, והמחוון (סעיף "שכבות GIS עירוניות") קובע איך הן נספרות. ניקוד מהשכבה: confidence `gis`.
 - הגירות: `supabase/migrations/20261116*_shchuna_gis*.sql`.
