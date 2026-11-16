@@ -62,6 +62,9 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
   (בלי מידרג 8 ו-9 ובלי "חניה ..."). מידרג לפי השמות (הערכה): 1 עורקי, 2 מאסף, 3 מקומי, 8 בין-עירוני, 9 מעבר חניה, 10 מדרחוב.
 - עשר שכבות (16.11.2026): bus_stops, streets, street_widths, gushim, parcels, lots (ייעודים), sidewalks (סקר 2021, חלקי),
   light_poles, traffic_lights, rova. השכבות משותפות ל"הרחובות הטובים" (NiceStreets-GH, `street_profile` ומנוע הבדיקה 0.2).
+- שכבת `buildings` (16.11.2026): טביעות OSM עם קומות לפי מקור (shimur, osm, estimate, unknown) ו-`floors_basis`.
+  `supabase/migrations/20261117a_shchuna_gis_buildings.sql`, מריצים בשלבים. כלל: כל עובדה עירונית נשמרת עם המקור שלה,
+  ומקור אמין יותר מחליף הערכה. שכבת מבנים עירונית תיכנס כמקור עליון.
 - `shchuna_plan_gis(plan)` מחזיר עובדות (מדדים 10, 14, 15, 18, רוחבים, קדסטר) ולא זורק שגיאה; כל חלק עם שגיאה משלו.
   היא עוטפת את `shchuna_plan_gis_core` ומוסיפה `services` מ-`shchuna_plan_services` (מדד 10, מגרשי מסחר ומבני ציבור עד 250 מ').
   `shchuna_plan_gis_map(plan)` מחזיר נתיבי SVG למפה בדף התוכנית (`src/components/CityLayers.tsx`).
