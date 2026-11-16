@@ -7,12 +7,23 @@
 --                at least 3 known; else the same zoning group citywide, at least 5 known. floors_n = how many.
 --   4. unknown   nothing to lean on
 -- A planned building (plan_models) is not the existing one, so plan rights are not used for existing heights.
+-- Run it in steps (each statement on its own): in one transaction it passes the 60 s limit of the SQL tool.
+-- Point-in-lot lookups go through shchuna_gis_sub (lots and rova cut by ST_Subdivide); the big road lots are otherwise slow.
+-- Result 16.11.2026, inside the city (6,296): osm 9%, estimate 75% (leave-one-out against the measured: mean error
+-- 1.55 floors, 78% within one floor), unknown 16% (port, industry, Eshkol park). Half the OSM footprints are outside the city.
 -- Rerun this file after a new OSM fetch or a new municipal buildings layer; a municipal layer goes in as source 0.
 
 insert into shchuna_gis_layers (id, title, source_file, source_date, note) values
   ('buildings', 'מבנים (טביעות OSM, קומות לפי מקור)', 'rn_osm building_fp', '2026-11-05',
    'קומות: shimur (רשם השימור), osm (building:levels או גובה), estimate (חציון באותו רובע וקבוצת ייעוד), unknown.')
 on conflict (id) do update set title = excluded.title, source_file = excluded.source_file, source_date = excluded.source_date, note = excluded.note;
+
+create table if not exists shchuna_gis_sub (layer text not null, fid int not null, geom geometry(Polygon, 2039) not null);
+alter table shchuna_gis_sub enable row level security;
+delete from shchuna_gis_sub where layer in ('lots', 'rova');
+insert into shchuna_gis_sub select layer, fid, (ST_Dump(ST_Subdivide(ST_CollectionExtract(geom, 3), 64))).geom
+from shchuna_gis_features where layer in ('lots', 'rova');
+create index if not exists shchuna_gis_sub_geom on shchuna_gis_sub using gist (geom);
 
 delete from shchuna_gis_features where layer = 'buildings';
 
