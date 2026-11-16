@@ -38,14 +38,18 @@ function facts(g: GisFacts): Fact[] {
   if (!g.network.error) {
     const v = g.network.per_km2_plan;
     const pts = v >= 150 ? 3 : v >= 125 ? 2 : v >= 100 ? 1 : 0;
+    // A plan inside one block has no network of its own: the rubric does not score it from the layer.
+    const block = g.network.nodes_in_plan === 0;
     out.push({
       metric: "14",
       title: "רשת הליכה",
-      value: fmt(v),
-      unit: "צמתים לקמ\"ר בתוכנית",
-      verdict: pts ? "pass" : "fail",
-      rule: pts ? `${pts} נק' לפי הסף (100, 125, 150)` : "מתחת לסף 100",
-      note: `ברדיוס 400 מ': ${fmt(g.network.per_km2_400)}. רחובות בלבד, בלי שבילים: גבול תחתון לרשת הקיימת.`,
+      value: fmt(block ? g.network.per_km2_400 : v),
+      unit: block ? "צמתים לקמ\"ר ברדיוס 400 מ'" : "צמתים לקמ\"ר בתוכנית",
+      verdict: block ? "info" : pts ? "pass" : "fail",
+      rule: block ? "התוכנית בתוך בלוק אחד: הקשר בלבד, לא ניקוד" : pts ? `${pts} נק' לפי הסף (100, 125, 150)` : "מתחת לסף 100",
+      note: block
+        ? "רחובות בלבד, בלי שבילים."
+        : `ברדיוס 400 מ': ${fmt(g.network.per_km2_400)}. רחובות בלבד, בלי שבילים: גבול תחתון לרשת הקיימת.`,
     });
   }
   if (!g.connection.error) {
@@ -58,7 +62,7 @@ function facts(g: GisFacts): Fact[] {
       unit: "מ', הקטע הארוך בלי חיבור",
       verdict: pts ? "pass" : "fail",
       rule: pts ? `${pts} נק' בדרישה הראשונה (עד ${pts === 3 ? 200 : 300} מ')` : "מעל 300 מ' בין חיבורים",
-      note: `${g.connection.connections} נקודות חיבור, ${pct(g.connection.connected_share)} מהגבול צמוד לרחוב.`,
+      note: `${g.connection.connections === 1 ? "נקודת חיבור אחת" : `${g.connection.connections} נקודות חיבור`}, ${pct(g.connection.connected_share)} מהגבול צמוד לרחוב.`,
     });
   }
   if (!g.cadaster.error) {
@@ -114,7 +118,7 @@ export function CityLayers({ planId }: { planId: string }) {
       <div className="gis-grid">
         {map && (
           <figure className="gis-map">
-            <svg viewBox={`${x0} ${-y1} ${x1 - x0} ${y1 - y0}`} role="img" aria-label="מפת התוכנית עם תחנות האוטובוס, הרחובות והחלקות">
+            <svg viewBox={`${x0} ${-y1} ${x1 - x0} ${y1 - y0}`} preserveAspectRatio="xMidYMid slice" role="img" aria-label="מפת התוכנית עם תחנות האוטובוס, הרחובות והחלקות">
               {map.cover && <path className="g-cover" d={map.cover} />}
               {map.streets.map((s) => (
                 <path key={s.k} className={`g-st g-${s.k}`} d={s.d} />

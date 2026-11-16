@@ -51,6 +51,18 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
 - מדד 38 (זכויות שמש) נקבע בפונקציה באופן דטרמיניסטי מ-`https://ashdod-ma-nivne.vercel.app/plans/<slug>/sun-metric38.json` (מחושב בריפו HITCHADSHUT, `scripts/shade-metric38.ts`), עם confidence `simulation` ("חישוב בסימולציה"). בלי הקובץ, המודל מודד כרגיל.
 - בדיקת הסכמה (תמל/2022): 29 מתוך 35 זהים, 35 מתוך 35 בהפרש עד נקודה. לחזור עליה אחרי כל שינוי במחוון או בפונקציה.
 
+## שכבות GIS עירוניות (מגרסה 3.1)
+- המקור: קבצי shapefile של העירייה ברשת ישראל (ITM). `scripts/gis/convert.py` ממיר כל שכבה ל-`data/gis/<layer>[-N].json`
+  (קואורדינטות ITM בדיוק 10 ס"מ, חלקים של עד 1.5MB). פקודה לכל שכבה בראש הקובץ.
+- טעינה: `select shchuna_gis_load('https://raw.githubusercontent.com/Anat1969/Shchuna360-GH/<sha>/data/gis/<file>.json')` דרך כלי ה-SQL.
+  חלק 1 מחליף את השכבה. רשומת השכבה (כותרת, קובץ מקור, תאריך) ב-`shchuna_gis_layers`. שכבה חדשה: שורה שם, המרה, טעינה.
+- טבלאות: `shchuna_gis_layers`, `shchuna_gis_features` (props jsonb, geom 2039). קריאה ציבורית. התצוגה `shchuna_gis_walk` היא רשת ההליכה
+  (בלי מידרג 8 ו-9 ובלי "חניה ..."). מידרג לפי השמות (הערכה): 1 עורקי, 2 מאסף, 3 מקומי, 8 בין-עירוני, 9 מעבר חניה, 10 מדרחוב.
+- `shchuna_plan_gis(plan)` מחזיר עובדות (מדדים 14, 15, 18, רוחבים, קדסטר) ולא זורק שגיאה; כל חלק עם שגיאה משלו.
+  `shchuna_plan_gis_map(plan)` מחזיר נתיבי SVG למפה בדף התוכנית (`src/components/CityLayers.tsx`).
+- המדידה האוטומטית מקבלת את העובדות, והמחוון (סעיף "שכבות GIS עירוניות") קובע איך הן נספרות. ניקוד מהשכבה: confidence `gis`.
+- הגירות: `supabase/migrations/20261116*_shchuna_gis*.sql`.
+
 ## עדכונים
 - `public/sw.js` מקבל חותמת build בכל בנייה; גרסה חדשה מציגה "עדכון עכשיו". כל שינוי מהותי: להוסיף רשומה ל-`CHANGES`
   ב-`src/pages/Updates.tsx` ולהעלות `version` ב-package.json.
@@ -64,6 +76,8 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
 npm run build && npx vite preview --port 4173 & npm test && npm run e2e
 ```
 `tests/e2e.mjs` מריץ Playwright עם מוקים לכל קריאות Supabase, כולל בדיקת לוגו העירייה, התקנה, ובלי גלילה אופקית בנייד.
+בסביבה שחוסמת `*.vercel.app`: להוריד את `ai-menu.js`, `demo.js` ו-`ashdod-logo.png` מ-`AppOfApp-GH/public` (raw.githubusercontent.com)
+לתיקייה, ולהריץ עם `APPOFAPP_DIR=<תיקייה> PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`. בלי זה בדיקות הלוגו נכשלות בגלל הרשת, לא בגלל הקוד.
 
 ## תיקונים של ענת
 (כל תיקון נרשם כאן ומיושם מאותו רגע.)

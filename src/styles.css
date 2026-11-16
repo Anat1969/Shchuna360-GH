@@ -2016,7 +2016,7 @@ ai-menu {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 440px;
+  aspect-ratio: 1.45;
   border-radius: 12px;
   background: var(--surface-2);
 }
