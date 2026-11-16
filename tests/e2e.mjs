@@ -33,11 +33,26 @@ const PUBLISHED = {
 };
 const saves = [];
 const SCORE = JSON.parse(readFileSync(new URL("./fixtures/plan-score.json", import.meta.url)));
+const GIS = JSON.parse(readFileSync(new URL("./fixtures/plan-gis.json", import.meta.url)));
+const GIS_MAP = JSON.parse(readFileSync(new URL("./fixtures/plan-gis-map.json", import.meta.url)));
 const PLAN = { id: SCORE.plan_project_id, title: "מתחם האצטדיון", kind: "urban_renewal", status: "approved", plan_number: SCORE.plan_number, quarter_id: "q-a", units_existing: 124, units_planned: 974 };
 const PENDING = { ...PLAN, id: "44444444-4444-4444-8444-444444444444", title: "תוכנית חדשה לבדיקה", plan_number: "603-9999999" };
 const server = new Map([[PUBLISHED.id, PUBLISHED]]);
 
 async function mock(page) {
+  // Where *.vercel.app is blocked, APPOFAPP_DIR serves the shared files (AppOfApp-GH public/: ai-menu.js, demo.js,
+  // ashdod-logo.png) locally. Context level, so service-worker requests are served too
+  // (needs PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1).
+  if (process.env.APPOFAPP_DIR)
+    await page.context().route("https://appofapp-gh.vercel.app/**", (r) => {
+      const name = new URL(r.request().url()).pathname.split("/").pop();
+      const type = name.endsWith(".js") ? "text/javascript" : name.endsWith(".png") ? "image/png" : "application/octet-stream";
+      try {
+        return r.fulfill({ status: 200, contentType: type, body: readFileSync(`${process.env.APPOFAPP_DIR}/${name}`) });
+      } catch {
+        return r.fulfill({ status: 404, body: "" });
+      }
+    });
   await page.route("**/functions/v1/shchuna-measure", (r) => r.fulfill({ status: 200, contentType: "application/json", body: '{"ready":false}' }));
   await page.route("**/rest/v1/**", async (route) => {
     const url = route.request().url();
@@ -57,6 +72,9 @@ async function mock(page) {
       server.delete(body.p_id);
       return json(null);
     }
+    // Real output of shchuna_plan_gis(_map) for plan 603-0704064, 16.11.2026.
+    if (url.includes("rpc/shchuna_plan_gis_map")) return json(GIS_MAP);
+    if (url.includes("rpc/shchuna_plan_gis")) return json(GIS);
     if (url.includes("/plan_projects")) return json([PLAN, PENDING]);
     if (url.includes("/shchuna_measure_runs")) return json([{ id: 1, plan_project_id: PENDING.id, status: "error", error: "test failure", started_at: "2026-10-29T19:00:00Z" }]);
     if (url.includes("/shchuna_plan_scores")) return json([{ ...SCORE, stage: 2, method: "claude-session", model: "claude-opus-5-5", measured_at: "2026-10-29T19:00:00Z" }]);
@@ -195,7 +213,11 @@ ok((await page.locator(".ev").count()) === 44, "plan page shows all 44 metrics w
 await page.locator(".ev:not(.silent) .ev-head").first().click();
 ok(await page.locator(".ev.open blockquote").isVisible(), "evidence quote opens");
 ok((await page.locator('a[href^="https://ashdod-ma-nivne.vercel.app/p/"]').count()) === 1, "link back to the plan in מה נבנה סביבי");
+ok((await page.locator(".panel.gis .gf").count()) === 4 && (await page.locator(".panel.gis svg .g-plan").count()) === 1, "plan page shows the blue line against the city GIS layers");
+ok((await page.locator(".gf-pass").count()) === 2 && (await page.locator(".gf-info").count()) === 2, "GIS facts are judged against the official thresholds; a one-block plan is context only");
 await page.screenshot({ path: "screens/plan-detail.png" });
+await page.locator(".panel.gis").scrollIntoViewIfNeeded();
+await page.locator(".panel.gis").screenshot({ path: "screens/plan-gis.png" });
 await page.getByRole("button", { name: "פתיחה כהערכה לעריכה" }).click();
 await page.waitForURL(/\/a\/[0-9a-f-]{36}/);
 const seeded = await page.evaluate(() => JSON.parse(localStorage.getItem("shchuna.assessments.v3"))[0]);
@@ -239,6 +261,11 @@ for (const p of ["/", "/plans", `/plans/${PLAN.id}`, "/assessments", `/a/${PUBLI
 await mp.goto(BASE + "/");
 await mp.waitForTimeout(1500);
 await mp.screenshot({ path: "screens/mobile-landing.png" });
+await mp.goto(BASE + `/plans/${PLAN.id}`);
+await mp.waitForTimeout(1200);
+await mp.locator(".panel.gis").scrollIntoViewIfNeeded();
+ok(await noHScroll(mp), "mobile plan page with the GIS map: no horizontal scroll");
+await mp.screenshot({ path: "screens/mobile-plan-gis.png" });
 await mp.goto(BASE + `/a/${PUBLISHED.id}?tab=1`);
 await mp.waitForTimeout(1000);
 await mp.screenshot({ path: "screens/mobile-workspace.png" });

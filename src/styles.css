@@ -1981,8 +1981,180 @@ ai-menu {
   background: #e6eefb;
   color: #1d4ed8;
 }
+.tag.conf-gis {
+  background: #e6f4f1;
+  color: #0f6b5c;
+}
 .ev-body {
   padding: 0 60px 14px 14px;
+}
+/* The blue line against the city GIS layers: map (golden share) beside the facts. */
+.panel.gis {
+  margin-top: 16px;
+}
+.gis-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.gis-head h2 {
+  margin: 0;
+}
+.gis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.618fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.gis-map {
+  margin: 0;
+}
+.gis-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1.45;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.gis-map path,
+.gis-map circle {
+  vector-effect: non-scaling-stroke;
+}
+.g-cover {
+  fill: rgb(93 173 226 / 0.2);
+  stroke: none;
+}
+.g-st {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.g-main {
+  stroke: var(--muted);
+  stroke-width: 2.6px;
+}
+.g-local {
+  stroke: var(--faint);
+  stroke-width: 1.2px;
+}
+.g-walk {
+  stroke: var(--faint);
+  stroke-width: 1.2px;
+  stroke-dasharray: 3 3;
+}
+.g-parcel {
+  fill: none;
+  stroke: var(--faint);
+  stroke-width: 0.6px;
+  opacity: 0.8;
+}
+.g-plan {
+  fill: rgb(29 78 216 / 0.07);
+  stroke: #1d4ed8;
+  stroke-width: 2.4px;
+  fill-rule: evenodd;
+}
+.g-stop {
+  fill: var(--ink);
+  stroke: var(--surface);
+  stroke-width: 1.2px;
+}
+.gis-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.gis-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gis-legend i {
+  display: inline-block;
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+}
+.lg-plan {
+  border: 2px solid #1d4ed8;
+  background: rgb(29 78 216 / 0.07);
+}
+.lg-cover {
+  background: rgb(93 173 226 / 0.35);
+}
+.lg-stop {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  background: var(--ink);
+}
+.lg-main {
+  height: 3px !important;
+  background: var(--muted);
+}
+.lg-local {
+  height: 2px !important;
+  background: var(--faint);
+}
+.lg-parcel {
+  border: 1px solid var(--faint);
+}
+.gis-facts {
+  display: grid;
+  gap: 10px;
+}
+.gf {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border-inline-start: 4px solid var(--track);
+}
+.gf-pass {
+  border-inline-start-color: #1e8a4c;
+}
+.gf-fail {
+  border-inline-start-color: #c0392b;
+}
+.gf-m {
+  color: var(--muted);
+  grid-row: span 2;
+  align-self: start;
+  padding-top: 3px;
+}
+.gf-t {
+  font-weight: 500;
+}
+.gf-v,
+.gf-r,
+.gf > small {
+  grid-column: 2;
+}
+.gf-v b {
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1.2;
+}
+.gf-pass .gf-r {
+  color: #1e6b3c;
+}
+.gf-fail .gf-r {
+  color: #a93226;
+}
+.gf-r {
+  font-size: 13px;
+  font-weight: 500;
+}
+.gf-streets {
+  margin: 2px 0 0;
 }
 blockquote {
   margin: 0 0 6px;
@@ -1995,6 +2167,7 @@ blockquote {
 @media (max-width: 860px) {
   .stats-row,
   .panel.city,
+  .gis-grid,
   .trust {
     grid-template-columns: minmax(0, 1fr);
   }
