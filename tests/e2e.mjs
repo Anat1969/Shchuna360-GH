@@ -38,6 +38,19 @@ const PENDING = { ...PLAN, id: "44444444-4444-4444-8444-444444444444", title: "�
 const server = new Map([[PUBLISHED.id, PUBLISHED]]);
 
 async function mock(page) {
+  // Where *.vercel.app is blocked, APPOFAPP_DIR serves the shared files (AppOfApp-GH public/: ai-menu.js, demo.js,
+  // ashdod-logo.png) locally. Context level, so service-worker requests are served too
+  // (needs PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1).
+  if (process.env.APPOFAPP_DIR)
+    await page.context().route("https://appofapp-gh.vercel.app/**", (r) => {
+      const name = new URL(r.request().url()).pathname.split("/").pop();
+      const type = name.endsWith(".js") ? "text/javascript" : name.endsWith(".png") ? "image/png" : "application/octet-stream";
+      try {
+        return r.fulfill({ status: 200, contentType: type, body: readFileSync(`${process.env.APPOFAPP_DIR}/${name}`) });
+      } catch {
+        return r.fulfill({ status: 404, body: "" });
+      }
+    });
   await page.route("**/functions/v1/shchuna-measure", (r) => r.fulfill({ status: 200, contentType: "application/json", body: '{"ready":false}' }));
   await page.route("**/rest/v1/**", async (route) => {
     const url = route.request().url();
@@ -57,6 +70,18 @@ async function mock(page) {
       server.delete(body.p_id);
       return json(null);
     }
+    if (url.includes("rpc/shchuna_plan_gis_map"))
+      return json({ box: [0, 0, 600, 400], plan: "M 200 -300 L 400 -300 400 -100 200 -100 Z", cover: "M 100 -350 L 500 -350 500 -50 100 -50 Z", parcels: null, streets: [{ k: "main", d: "M 0 -200 L 600 -200" }], stops: [[300, -210]] });
+    if (url.includes("rpc/shchuna_plan_gis"))
+      return json({
+        area_m2: 37521,
+        bus: { stops_250: 18, stops_500: 40, nearest_m: 0, cover_250: 1, cover_400: 1, lines_250: ["2", "5"] },
+        network: { nodes_in_plan: 1, dead_ends_in_plan: 0, per_km2_plan: 20, per_km2_400: 67, street_m_in_plan: 300 },
+        connection: { perimeter_m: 900, connected_share: 0.56, connections: 3, max_gap_m: 220 },
+        widths: { streets: [{ name: "הרצל", hierarchy: 1, width_m: "30", taba: null }] },
+        cadaster: { parcels: 18, gushim: [2086] },
+        layers: { bus_stops: { title: "תחנות אוטובוס", source_date: "2026-11-05", features: 514 } },
+      });
     if (url.includes("/plan_projects")) return json([PLAN, PENDING]);
     if (url.includes("/shchuna_measure_runs")) return json([{ id: 1, plan_project_id: PENDING.id, status: "error", error: "test failure", started_at: "2026-10-29T19:00:00Z" }]);
     if (url.includes("/shchuna_plan_scores")) return json([{ ...SCORE, stage: 2, method: "claude-session", model: "claude-opus-5-5", measured_at: "2026-10-29T19:00:00Z" }]);
@@ -195,6 +220,8 @@ ok((await page.locator(".ev").count()) === 44, "plan page shows all 44 metrics w
 await page.locator(".ev:not(.silent) .ev-head").first().click();
 ok(await page.locator(".ev.open blockquote").isVisible(), "evidence quote opens");
 ok((await page.locator('a[href^="https://ashdod-ma-nivne.vercel.app/p/"]').count()) === 1, "link back to the plan in מה נבנה סביבי");
+ok((await page.locator(".panel.gis .gf").count()) === 4 && (await page.locator(".panel.gis svg .g-plan").count()) === 1, "plan page shows the blue line against the city GIS layers");
+ok((await page.locator(".gf-pass").count()) === 2 && (await page.locator(".gf-fail").count()) === 1, "GIS facts are judged against the official thresholds");
 await page.screenshot({ path: "screens/plan-detail.png" });
 await page.getByRole("button", { name: "פתיחה כהערכה לעריכה" }).click();
 await page.waitForURL(/\/a\/[0-9a-f-]{36}/);

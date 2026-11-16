@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Bar, Num, Radar, Ring } from "../components/Charts";
+import { CityLayers } from "../components/CityLayers";
 import { usePageMenu } from "../components/TopBar";
 import { Reveal, Segmented, fmtDate, toast } from "../components/UI";
 import { CHAPTERS } from "../data/chapters";
@@ -7,7 +8,7 @@ import { linkProps, navigate, setQuery, useLocation } from "../lib/router";
 import { MA_NIVNE, STATUS, measure, measureAuto, sectionHeat, usePlans } from "../lib/plans";
 import { create, quarterName, useStore } from "../lib/store";
 
-const CONF: Record<string, string> = { document: "ציטוט ישיר", inferred: "הסקה מהנתונים", simulation: "חישוב בסימולציה", none: "לא ניתן למדוד" };
+const CONF: Record<string, string> = { document: "ציטוט ישיר", inferred: "הסקה מהנתונים", simulation: "חישוב בסימולציה", gis: "מפת העיר", none: "לא ניתן למדוד" };
 const QUOTE: Record<string, string> = { exact: "ציטוט מדויק", condensed: "תמצית מהמקור", scan: "תעתיק מסריקה" };
 const METHOD: Record<string, string> = { "claude-session": "קריאת Claude", auto: "מדידה אוטומטית", manual: "מדידה ידנית" };
 
@@ -156,6 +157,8 @@ export default function PlanDetail({ id }: { id: string }) {
           })}
         </section>
       </div>
+
+      <CityLayers planId={id} />
 
       <div className="panel-h tools">
         <h2>44 המדדים, עם הראיות</h2>

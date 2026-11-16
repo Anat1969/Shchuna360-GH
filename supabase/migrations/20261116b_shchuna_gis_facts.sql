@@ -3,6 +3,10 @@
 -- 2. Streets often run straight through a junction without a vertex there, so the network is noded
 --    (ST_Node) before counting intersections, and nearby ends (3 m) are clustered into one node.
 -- 3. Each block of facts has its own error handler: one failing layer no longer hides the others.
+-- 4. street_widths: F_TABA_WID (props.plan_width) holds the plan number, not a width; parking aisles left out.
+--    Bus lines split on commas and spaces ("11 11א").
+
+update shchuna_gis_layers set note = 'רוחב זכות הדרך לפי F_STRT_WID. השדה F_TABA_WID מחזיק את מספר התב"ע, לא רוחב.' where id = 'street_widths';
 
 update shchuna_gis_features set geom = ST_MakeValid(geom) where not ST_IsValid(geom);
 
@@ -57,7 +61,7 @@ begin
       'nearest_m', (select round(min(d)::numeric) from s),
       'cover_250', round((ST_Area(ST_Intersection(plan, coalesce((select ST_Union(ST_Buffer(geom, 250, 16)) from s where d <= 250), 'POLYGON EMPTY'::geometry))) / area)::numeric, 3),
       'cover_400', round((ST_Area(ST_Intersection(plan, coalesce((select ST_Union(ST_Buffer(geom, 400, 16)) from s where d <= 400), 'POLYGON EMPTY'::geometry))) / area)::numeric, 3),
-      'lines_250', (select coalesce(jsonb_agg(distinct trim(l)), '[]') from s, regexp_split_to_table(coalesce(props->>'lines', ''), ',') l where d <= 250 and trim(l) <> ''),
+      'lines_250', (select coalesce(jsonb_agg(distinct trim(l)), '[]') from s, regexp_split_to_table(coalesce(props->>'lines', ''), '[,\s]+') l where d <= 250 and trim(l) <> ''),
       'list', (select coalesce(jsonb_agg(jsonb_build_object('name', props->>'name', 'code', props->>'code', 'street', props->>'street', 'lines', props->>'lines', 'm', round(d::numeric)) order by d), '[]')
                from (select * from s where d <= 250 order by d limit 12) x)
     ) into bus;
@@ -111,8 +115,10 @@ begin
   -- Context for metrics 13 and 16: right-of-way widths of the streets along and inside the blue line.
   begin
     select jsonb_build_object('streets', coalesce(jsonb_agg(x order by x->>'name'), '[]')) into wid from (
-      select jsonb_build_object('name', props->>'name', 'hierarchy', min((props->>'hierarchy')::int), 'width_m', max(props->>'width'), 'plan_width_m', max(props->>'plan_width')) x
+      select jsonb_build_object('name', props->>'name', 'hierarchy', min((props->>'hierarchy')::int), 'width_m', max(props->>'width'),
+                                'taba', max(coalesce(props->>'plan_width', props->>'plan'))) x
       from shchuna_gis_features where layer = 'street_widths' and ST_DWithin(geom, plan, 15) and props ? 'name'
+        and coalesce((props->>'hierarchy')::int, 0) <> 9 and props->>'name' not like 'חני%'
       group by props->>'name') q;
   exception when others then wid := jsonb_build_object('error', SQLERRM);
   end;

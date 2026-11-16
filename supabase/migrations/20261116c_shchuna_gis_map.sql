@@ -21,7 +21,7 @@ begin
     'plan', ST_AsSVG(plan, 0, 0),
     'cover', (select ST_AsSVG(ST_Intersection(ST_Union(ST_Buffer(geom, 250, 12)), box), 0, 0) from shchuna_gis_features
               where layer = 'bus_stops' and coalesce(props->>'kind', '') <> 'הורדה בלבד' and ST_DWithin(geom, box, 250)),
-    'parcels', (select ST_AsSVG(ST_Collect(ST_Boundary(geom)), 0, 0) from shchuna_gis_features
+    'parcels', (select ST_AsSVG(ST_SimplifyPreserveTopology(ST_Collect(ST_Boundary(geom)), 0.8), 0, 0) from shchuna_gis_features
                 where layer = 'parcels' and ST_Intersects(geom, plan) and ST_Area(ST_Intersection(geom, plan)) >= least(200, 0.3 * ST_Area(geom))),
     'streets', (select coalesce(jsonb_agg(jsonb_build_object('k', k, 'd', d)), '[]') from (
                   select case when h in (1, 2) then 'main' when h = 10 then 'walk' else 'local' end k,
