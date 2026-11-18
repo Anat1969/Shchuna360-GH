@@ -76,3 +76,18 @@ begin
   return n;
 end $$;
 revoke all on function shchuna_gtfs_list(date), shchuna_gtfs_fill(date, int), shchuna_gtfs_publish(date) from public, anon, authenticated;
+
+-- The fill runs in the background with pg_cron (the SQL tool cuts calls at 60 s and the API answers in ~1.6 s per stop).
+-- A job per minute fills 20 stops; when none are left it publishes the layer and unschedules itself.
+create or replace function shchuna_gtfs_tick() returns void
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if exists (select 1 from shchuna_gtfs_stops where day = '2026-11-16' and fetched_at is null) then
+    perform shchuna_gtfs_fill('2026-11-16', 20);
+  else
+    perform shchuna_gtfs_publish('2026-11-16');
+    perform cron.unschedule('shchuna-gtfs-fill');
+  end if;
+end $$;
+revoke all on function shchuna_gtfs_tick() from public, anon, authenticated;
+-- select cron.schedule('shchuna-gtfs-fill', '* * * * *', 'select public.shchuna_gtfs_tick()');
