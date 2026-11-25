@@ -62,6 +62,9 @@ Vite 8, React 19, TypeScript 7, motion 14, supabase-js 2. CSS ידני ב-`src/s
   (בלי מידרג 8 ו-9 ובלי "חניה ..."). מידרג לפי השמות (הערכה): 1 עורקי, 2 מאסף, 3 מקומי, 8 בין-עירוני, 9 מעבר חניה, 10 מדרחוב.
 - עשר שכבות (16.11.2026): bus_stops, streets, street_widths, gushim, parcels, lots (ייעודים), sidewalks (סקר 2021, חלקי),
   light_poles, traffic_lights, rova. השכבות משותפות ל"הרחובות הטובים" (NiceStreets-GH, `street_profile` ומנוע הבדיקה 0.2).
+- שכבת `bike_paths` (24.11.2026): שבילי אופניים מ-`bike_road.shp`, 139 קטעים. נטענה ב-SQL מ-`data/bike-paths.geojson` של NiceStreets-GH
+  (WGS84, הומר חזרה ל-ITM). מוקד 106 לא נכנס לכאן: הקובץ כולל פרטים אישיים, והספירות לפי רחוב ב-`moked106_street_counts` (צוות בלבד).
+- קטלוג חי של כל השכבות: `select * from shchuna_gis_layers`. משתמשים: שכונה 360, הרחובות הטובים. "רחוב טוב במספרים" עוד מחשב מ-OSM (`rn_osm`).
 - שכבת `buildings` (16.11.2026): טביעות OSM עם קומות לפי מקור (shimur, osm, estimate, unknown) ו-`floors_basis`.
   `supabase/migrations/20261117a_shchuna_gis_buildings.sql`, מריצים בשלבים. כלל: כל עובדה עירונית נשמרת עם המקור שלה,
   ומקור אמין יותר מחליף הערכה. שכבת מבנים עירונית תיכנס כמקור עליון.
