@@ -10,14 +10,14 @@ begin
   area := ST_Area(plan);
   return (
     with s as (
-      select (props->>'rides_peak')::int peak, (props->>'rides_day')::int day, geom
+      select (props->>'rides_peak')::int as peak, (props->>'rides_day')::int as rides, geom
       from shchuna_gis_features where layer = 'bus_frequency' and ST_DWithin(geom, plan, 250)
     )
     select jsonb_build_object(
       'stops_250', count(*),
       'frequent_stops_250', count(*) filter (where peak >= 8),
       'best_peak_headway_min', round(120.0 / nullif(max(peak), 0), 1),
-      'rides_day_250', sum(day),
+      'rides_day_250', sum(rides),
       'frequent_cover_250', round((coalesce(ST_Area(ST_Intersection(plan,
           ST_Union(ST_Buffer(geom, 250, 12)) filter (where peak >= 8))), 0) / area)::numeric, 3),
       'gtfs_day', (select source_date from shchuna_gis_layers where id = 'bus_frequency'))
